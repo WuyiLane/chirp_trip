@@ -6,35 +6,39 @@ import '../app/theme.dart';
 
 /// 吉祥物「小啾」的脸：底部 tab、头像兜底、空状态都用它。
 /// [filled] = true 画实心黄脸（选中态），false 画线框（未选中态）；
-/// 底栏做表情过渡时用 [progress]（0 线框 → 1 实心）连续插值，优先级高于 [filled]。
+/// 底栏做表情过渡时用 [progress]（0 线框 → 1 实心）连续插值，优先级高于 [filled]；
+/// [draw] 是描线进度（底栏选中时线条从头画出来），前 70% 描脸和呆毛，后 30% 描嘴和眼睛。
 class ChickFace extends StatelessWidget {
   const ChickFace({
     super.key,
     this.size = 28,
     this.filled = true,
     this.progress,
+    this.draw = 1,
     this.lineColor = AppColors.textPrimary,
   });
 
   final double size;
   final bool filled;
   final double? progress;
+  final double draw;
   final Color lineColor;
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size.square(size),
-      painter: _ChickFacePainter(progress: progress ?? (filled ? 1 : 0), lineColor: lineColor),
+      painter: _ChickFacePainter(progress: progress ?? (filled ? 1 : 0), draw: draw, lineColor: lineColor),
     );
   }
 }
 
 class _ChickFacePainter extends CustomPainter {
-  _ChickFacePainter({required this.progress, required this.lineColor});
+  _ChickFacePainter({required this.progress, required this.draw, required this.lineColor});
 
   /// 0 = 线框，1 = 黄色实心 + 橙嘴 + 腮红
   final double progress;
+  final double draw;
   final Color lineColor;
 
   @override
@@ -43,30 +47,31 @@ class _ChickFacePainter extends CustomPainter {
     final c = Offset(s / 2, s * 0.56);
     final r = s * 0.40;
     final t = progress.clamp(0.0, 1.0);
+    final fo = (draw / 0.7).clamp(0.0, 1.0);
+    final fd = ((draw - 0.7) / 0.3).clamp(0.0, 1.0);
     final stroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = s * 0.07
       ..strokeCap = StrokeCap.round
       ..color = lineColor;
 
-    // 头顶两撮呆毛
-    final crest = Path()
-      ..moveTo(c.dx - s * 0.06, c.dy - r)
-      ..quadraticBezierTo(c.dx - s * 0.16, c.dy - r - s * 0.16, c.dx - s * 0.02, c.dy - r - s * 0.14)
-      ..moveTo(c.dx + s * 0.04, c.dy - r)
-      ..quadraticBezierTo(c.dx + s * 0.10, c.dy - r - s * 0.18, c.dx + s * 0.18, c.dy - r - s * 0.10);
-    canvas.drawPath(crest, stroke);
-
     // 脸：填色随 progress 渐显
     if (t > 0) {
       canvas.drawCircle(c, r, Paint()..color = AppColors.primary.withValues(alpha: t));
     }
-    canvas.drawCircle(c, r, stroke);
+    // 脸的轮廓 + 头顶两撮呆毛，一笔连着描
+    final outline = Path()
+      ..addOval(Rect.fromCircle(center: c, radius: r))
+      ..moveTo(c.dx - s * 0.06, c.dy - r)
+      ..quadraticBezierTo(c.dx - s * 0.16, c.dy - r - s * 0.16, c.dx - s * 0.02, c.dy - r - s * 0.14)
+      ..moveTo(c.dx + s * 0.04, c.dy - r)
+      ..quadraticBezierTo(c.dx + s * 0.10, c.dy - r - s * 0.18, c.dx + s * 0.18, c.dy - r - s * 0.10);
+    tracePath(canvas, outline, fo, stroke);
 
     // 眼睛
     final eye = Paint()..color = lineColor;
-    canvas.drawCircle(Offset(c.dx - r * 0.38, c.dy - r * 0.12), s * 0.05, eye);
-    canvas.drawCircle(Offset(c.dx + r * 0.38, c.dy - r * 0.12), s * 0.05, eye);
+    canvas.drawCircle(Offset(c.dx - r * 0.38, c.dy - r * 0.12), s * 0.05 * fd, eye);
+    canvas.drawCircle(Offset(c.dx + r * 0.38, c.dy - r * 0.12), s * 0.05 * fd, eye);
 
     // 嘴：小菱形，实心态涂橙色
     final beak = Path()
@@ -78,7 +83,7 @@ class _ChickFacePainter extends CustomPainter {
     if (t > 0) {
       canvas.drawPath(beak, Paint()..color = const Color(0xFFFF8A3D).withValues(alpha: t));
     }
-    canvas.drawPath(beak, stroke..strokeWidth = s * 0.05);
+    tracePath(canvas, beak, fd, stroke..strokeWidth = s * 0.05);
 
     // 腮红（随 progress 渐显）
     if (t > 0) {
@@ -89,7 +94,25 @@ class _ChickFacePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ChickFacePainter old) => old.progress != progress || old.lineColor != lineColor;
+  bool shouldRepaint(_ChickFacePainter old) =>
+      old.progress != progress || old.draw != draw || old.lineColor != lineColor;
+}
+
+/// 沿着路径长度只画前 [f] 这一截：多段轮廓按顺序接着画，像一支笔连着描。底栏图标选中时的「描线」用它。
+void tracePath(Canvas canvas, Path path, double f, Paint paint) {
+  if (f >= 1) {
+    canvas.drawPath(path, paint);
+    return;
+  }
+  if (f <= 0) return;
+  final metrics = path.computeMetrics().toList();
+  var remain = metrics.fold(0.0, (s, m) => s + m.length) * f;
+  for (final m in metrics) {
+    if (remain <= 0) break;
+    final len = math.min(m.length, remain);
+    canvas.drawPath(m.extractPath(0, len), paint);
+    remain -= len;
+  }
 }
 
 /// 整只小啾（引导页 / 登录页 / 空状态用），带身体、翅膀和脚。

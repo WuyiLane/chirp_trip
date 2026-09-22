@@ -76,15 +76,19 @@ class ChickTabBar extends StatelessWidget {
                     // 5 个等宽槽：4 个 tab + 中间给「+」留的空位
                     child: Row(
                       children: [
-                        _item(0, '首页', (t) => _homeGlyph(t)),
-                        _item(1, '发现', (t) => _GlyphIcon(_Glyph.discover, t)),
+                        _item(0, '首页', (t, d) => _homeGlyph(t, d)),
+                        _item(1, '发现', (t, d) => _GlyphIcon(_Glyph.discover, t, draw: d)),
                         const Expanded(child: SizedBox()),
                         _item(
                           2,
                           '消息',
-                          (t) => RedDot(show: messageDot, offset: const Offset(-2, 0), child: _GlyphIcon(_Glyph.message, t)),
+                          (t, d) => RedDot(
+                            show: messageDot,
+                            offset: const Offset(-2, 0),
+                            child: _GlyphIcon(_Glyph.message, t, draw: d),
+                          ),
                         ),
-                        _item(3, '我的', (t) => ChickFace(size: 30, progress: t)),
+                        _item(3, '我的', (t, d) => ChickFace(size: 30, progress: t, draw: d)),
                       ],
                     ),
                   ),
@@ -107,14 +111,14 @@ class ChickTabBar extends StatelessWidget {
   }
 
   /// 首页图标三态：刷新中 → 转圈箭头；滚下去了 → 回到顶部箭头；否则房子。切换时缩放淡入
-  Widget _homeGlyph(double t) {
+  Widget _homeGlyph(double t, double draw) {
     final Widget child;
     if (refreshing) {
       child = const _Spinner(key: ValueKey('spin'));
     } else if (homeToTop) {
-      child = _GlyphIcon(_Glyph.toTop, t, key: const ValueKey('top'));
+      child = _GlyphIcon(_Glyph.toTop, t, key: const ValueKey('top'), draw: draw);
     } else {
-      child = _GlyphIcon(_Glyph.home, t, key: const ValueKey('home'));
+      child = _GlyphIcon(_Glyph.home, t, key: const ValueKey('home'), draw: draw);
     }
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 220),
@@ -128,7 +132,7 @@ class ChickTabBar extends StatelessWidget {
   }
 
   /// 一个 tab：图标 + 文字。文字常显，选中时变黑加粗，没选中是灰色
-  Widget _item(int i, String label, Widget Function(double t) builder) {
+  Widget _item(int i, String label, Widget Function(double t, double draw) builder) {
     final selected = i == index;
     return Expanded(
       child: GestureDetector(
@@ -156,19 +160,27 @@ class ChickTabBar extends StatelessWidget {
   }
 }
 
-/// 表情 + 弹性：选中时 t 用 easeOutBack 从 0 推到 1（会略微越过再回来），
-/// 同时整体放大到 1.25 回弹；取消选中时 t 平滑退回 0。
+/// 选中动画分两段：先「描线」——线条像被一支笔从头画出来（draw 0 → 1），
+/// 描完再走表情：t 用 easeOutBack 从 0 推到 1（会略微越过再回来），同时整体放大到 1.25 回弹；
+/// 取消选中时线保持画满，t 平滑退回 0。
 class _TabIcon extends StatefulWidget {
   const _TabIcon({required this.selected, required this.builder});
 
   final bool selected;
-  final Widget Function(double t) builder;
+  final Widget Function(double t, double draw) builder;
 
   @override
   State<_TabIcon> createState() => _TabIconState();
 }
 
 class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
+  late final AnimationController _draw = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 380),
+    value: 1,
+  );
+  late final Animation<double> _drawT = CurvedAnimation(parent: _draw, curve: Curves.easeInOutCubic);
+
   late final AnimationController _expr = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 420),
@@ -196,15 +208,21 @@ class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
     super.didUpdateWidget(old);
     if (widget.selected == old.selected) return;
     if (widget.selected) {
-      _expr.forward();
-      _bounceCtrl.forward(from: 0);
+      // 先从头描一遍线，描完再填色、做表情、弹一下（中途被切走的话 then 不会触发）
+      _draw.forward(from: 0).then((_) {
+        if (!mounted || !widget.selected) return;
+        _expr.forward();
+        _bounceCtrl.forward(from: 0);
+      });
     } else {
+      _draw.value = 1;
       _expr.reverse();
     }
   }
 
   @override
   void dispose() {
+    _draw.dispose();
     _expr.dispose();
     _bounceCtrl.dispose();
     super.dispose();
@@ -214,7 +232,10 @@ class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return ScaleTransition(
       scale: _bounce,
-      child: AnimatedBuilder(animation: _t, builder: (_, _) => widget.builder(_t.value)),
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_t, _drawT]),
+        builder: (_, _) => widget.builder(_t.value, _drawT.value),
+      ),
     );
   }
 }
@@ -222,32 +243,43 @@ class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
 enum _Glyph { home, discover, message, toTop }
 
 class _GlyphIcon extends StatelessWidget {
-  const _GlyphIcon(this.glyph, this.t, {super.key});
+  const _GlyphIcon(this.glyph, this.t, {super.key, this.draw = 1});
 
   final _Glyph glyph;
   final double t;
+  final double draw;
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(size: const Size.square(30), painter: _GlyphPainter(glyph, t));
+    return CustomPaint(size: const Size.square(30), painter: _GlyphPainter(glyph, t, draw));
   }
 }
 
-/// 手绘 tab 图标，画在 28×28 的坐标系里再按尺寸缩放。t = 表情进度（0 线框 → 1 黄色实心 + 表情）。
+/// 手绘 tab 图标，画在 28×28 的坐标系里再按尺寸缩放。
+/// t = 表情进度（0 线框 → 1 黄色实心 + 表情）；draw = 描线进度：前 70% 描外轮廓，后 30% 描五官。
 class _GlyphPainter extends CustomPainter {
-  _GlyphPainter(this.glyph, this.t);
+  _GlyphPainter(this.glyph, this.t, this.draw);
 
   final _Glyph glyph;
   final double t;
+  final double draw;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.scale(size.width / 28);
     // 填色 / 透明度用夹在 0~1 的值，形变（嘴角、瞳孔位移）用带回弹的原值
     final a = t.clamp(0.0, 1.0);
+    final fo = (draw / 0.7).clamp(0.0, 1.0);
+    final fd = ((draw - 0.7) / 0.3).clamp(0.0, 1.0);
     final line = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.9
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color = AppColors.textPrimary;
+    final thin = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..color = AppColors.textPrimary;
@@ -266,21 +298,21 @@ class _GlyphPainter extends CustomPainter {
           ..lineTo(4.5, 23.5)
           ..close();
         if (a > 0) canvas.drawPath(house, fill);
-        canvas.drawPath(house, line);
+        tracePath(canvas, house, fo, line);
         // 门：一条横线，选中时下弯张开成白色的笑嘴
         final mouth = Path()
           ..moveTo(10, 17.5)
           ..quadraticBezierTo(14, 17.5 + 7.5 * t, 18, 17.5)
           ..close();
         if (a > 0) canvas.drawPath(mouth, Paint()..color = Colors.white.withValues(alpha: a));
-        canvas.drawPath(mouth, line..strokeWidth = 1.6);
+        tracePath(canvas, mouth, fd, thin);
 
       case _Glyph.discover:
         // 外圈 + 一只「眼睛」：未选中瞳孔是偏右上的空圈，选中滑到中间变成实心黑点带高光
         if (a > 0) canvas.drawCircle(c, 9.5, fill);
-        canvas.drawCircle(c, 9.5, line);
+        tracePath(canvas, Path()..addOval(Rect.fromCircle(center: c, radius: 9.5)), fo, line);
         final pupil = Offset(14 + 2.6 * (1 - t), 14 - 1.6 * (1 - t));
-        canvas.drawCircle(pupil, 3.2, line..strokeWidth = 1.6);
+        tracePath(canvas, Path()..addOval(Rect.fromCircle(center: pupil, radius: 3.2)), fd, thin);
         if (a > 0) {
           canvas.drawCircle(pupil, 3.2 * a, ink);
           canvas.drawCircle(pupil + const Offset(-1.1, -1.1), 1.0 * a, Paint()..color = Colors.white);
@@ -288,43 +320,40 @@ class _GlyphPainter extends CustomPainter {
 
       case _Glyph.message:
         // 气泡 + 小尾巴 + 脸：眼睛两点，嘴角随 t 上扬
-        final bubble = RRect.fromRectAndRadius(const Rect.fromLTWH(4, 5.5, 20, 14.5), const Radius.circular(7.25));
-        if (a > 0) canvas.drawRRect(bubble, fill);
-        canvas.drawRRect(bubble, line);
+        final bubble = Path()
+          ..addRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(4, 5.5, 20, 14.5), const Radius.circular(7.25)));
         final tail = Path()
           ..moveTo(7.5, 18.6)
           ..lineTo(6.2, 23.6)
           ..lineTo(12, 19.4)
           ..close();
-        // 先用底色把尾巴处的气泡描边盖掉，再描尾巴外侧两条边
-        canvas.drawPath(tail, Paint()..color = Color.lerp(Colors.white, AppColors.primary, a)!);
-        final tailEdge = Path()
-          ..moveTo(8.2, 19.9)
-          ..lineTo(6.2, 23.6)
-          ..lineTo(11.4, 19.9);
-        canvas.drawPath(tailEdge, line);
-        canvas.drawCircle(const Offset(10.6, 11.6), 1.25, ink);
-        canvas.drawCircle(const Offset(17.4, 11.6), 1.25, ink);
+        // 气泡和尾巴并成一个外轮廓：描边一笔连着走，尾巴根部也不会有一道横线
+        final outline = Path.combine(PathOperation.union, bubble, tail);
+        if (a > 0) canvas.drawPath(outline, fill);
+        tracePath(canvas, outline, fo, line);
+        canvas.drawCircle(const Offset(10.6, 11.6), 1.25 * fd, ink);
+        canvas.drawCircle(const Offset(17.4, 11.6), 1.25 * fd, ink);
         final smile = Path()
           ..moveTo(11.4, 15.3)
           ..quadraticBezierTo(14, 15.3 + 3.6 * t, 16.6, 15.3);
-        canvas.drawPath(smile, line..strokeWidth = 1.6);
+        tracePath(canvas, smile, fd, thin);
 
       case _Glyph.toTop:
         // 圆圈里一支向上的箭头（首页滚动后的「回到顶部」）
         if (a > 0) canvas.drawCircle(c, 9.5, fill);
-        canvas.drawCircle(c, 9.5, line);
-        canvas.drawLine(const Offset(14, 19), const Offset(14, 9.6), line);
-        final chevron = Path()
+        tracePath(canvas, Path()..addOval(Rect.fromCircle(center: c, radius: 9.5)), fo, line);
+        final arrow = Path()
+          ..moveTo(14, 19)
+          ..lineTo(14, 9.6)
           ..moveTo(9.6, 14)
           ..lineTo(14, 9.6)
           ..lineTo(18.4, 14);
-        canvas.drawPath(chevron, line);
+        tracePath(canvas, arrow, fd, line);
     }
   }
 
   @override
-  bool shouldRepaint(_GlyphPainter old) => old.t != t || old.glyph != glyph;
+  bool shouldRepaint(_GlyphPainter old) => old.t != t || old.draw != draw || old.glyph != glyph;
 }
 
 /// 首页刷新中：两支环绕箭头绕着一个黄点转
