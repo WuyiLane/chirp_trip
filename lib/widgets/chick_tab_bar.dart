@@ -42,7 +42,7 @@ class ChickTabBar extends StatelessWidget {
 
   /// 选中态那颗滑动的药丸
   static const _pillWidth = 56.0;
-  static const _pillHeight = 44.0;
+  static const _pillHeight = 52.0;
 
   @override
   Widget build(BuildContext context) {
@@ -86,18 +86,19 @@ class ChickTabBar extends StatelessWidget {
                           Positioned.fill(
                             child: Row(
                               children: [
-                                _item(0, (t) => _homeGlyph(t)),
-                                _item(1, (t) => _GlyphIcon(_Glyph.discover, t)),
+                                _item(0, '首页', (t) => _homeGlyph(t)),
+                                _item(1, '发现', (t) => _GlyphIcon(_Glyph.discover, t)),
                                 const Expanded(child: SizedBox()),
                                 _item(
                                   2,
+                                  '消息',
                                   (t) => RedDot(
                                     show: messageDot,
                                     offset: const Offset(-2, 0),
                                     child: _GlyphIcon(_Glyph.message, t),
                                   ),
                                 ),
-                                _item(3, (t) => ChickFace(size: 30, progress: t)),
+                                _item(3, '我的', (t) => ChickFace(size: 30, progress: t)),
                               ],
                             ),
                           ),
@@ -144,13 +145,43 @@ class ChickTabBar extends StatelessWidget {
     );
   }
 
-  Widget _item(int i, Widget Function(double t) builder) {
+  /// 一个 tab：图标 + 只在选中时展开出来的文字（iOS 26 那种选中项带标签），
+  /// 文字从图标底下抽屉式拉开并淡入，Column 居中所以图标会顺势往上让一点位置
+  Widget _item(int i, String label, Widget Function(double t) builder) {
+    final selected = i == index;
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => onChanged(i),
-        child: Center(
-          child: _TabIcon(selected: i == index, builder: builder),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _TabIcon(selected: selected, builder: builder),
+            ClipRect(
+              child: AnimatedAlign(
+                alignment: Alignment.topCenter,
+                heightFactor: selected ? 1 : 0,
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOut,
+                child: AnimatedOpacity(
+                  opacity: selected ? 1 : 0,
+                  duration: const Duration(milliseconds: 220),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
