@@ -162,7 +162,7 @@ class ChickTabBar extends StatelessWidget {
 
 /// 选中动画分两段：先「描线」——线条像被一支笔从头画出来（draw 0 → 1），
 /// 描完再走表情：t 用 easeOutBack 从 0 推到 1（会略微越过再回来），同时整体放大到 1.25 回弹；
-/// 取消选中时线保持画满，t 平滑退回 0。
+/// 取消选中时 t 退回 0，线条从尾巴反向擦掉，再快速重新描一遍成线框。
 class _TabIcon extends StatefulWidget {
   const _TabIcon({required this.selected, required this.builder});
 
@@ -174,12 +174,14 @@ class _TabIcon extends StatefulWidget {
 }
 
 class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
+  /// 描线：选中时 0 → 1 慢慢描（能看清笔在走），切走时 1 → 0 反向擦，再补一遍
   late final AnimationController _draw = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 380),
+    duration: const Duration(milliseconds: 700),
+    reverseDuration: const Duration(milliseconds: 380),
     value: 1,
   );
-  late final Animation<double> _drawT = CurvedAnimation(parent: _draw, curve: Curves.easeInOutCubic);
+  late final Animation<double> _drawT = CurvedAnimation(parent: _draw, curve: Curves.easeInOut);
 
   late final AnimationController _expr = AnimationController(
     vsync: this,
@@ -215,8 +217,12 @@ class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
         _bounceCtrl.forward(from: 0);
       });
     } else {
-      _draw.value = 1;
+      // 填色退掉的同时把线从尾巴擦回去，擦完再快速描一遍，留下线框
       _expr.reverse();
+      _draw.reverse().then((_) {
+        if (!mounted || widget.selected) return;
+        _draw.animateTo(1, duration: const Duration(milliseconds: 380));
+      });
     }
   }
 
