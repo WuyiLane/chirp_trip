@@ -1,0 +1,35 @@
+# 在 GitHub 的 macOS 机器上编译一个「未签名」的 iOS 包（.ipa），
+# 下载后用 Sideloadly / 爱思助手 拿自己的 Apple ID 签名装到手机上试玩。
+# 触发方式：仓库页面 → Actions → 「iOS 未签名包」 → Run workflow
+name: iOS 未签名包
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          cache: true
+
+      - run: flutter pub get
+
+      # --no-codesign：不需要证书 / 描述文件，产物是未签名的 Runner.app
+      - run: flutter build ios --release --no-codesign
+
+      # .ipa 其实就是把 Runner.app 放进 Payload 目录再 zip
+      - name: 打成 ipa
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -qr chirp_trip.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chirp_trip-ipa
+          path: chirp_trip.ipa

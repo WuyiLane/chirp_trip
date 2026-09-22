@@ -1,0 +1,26 @@
+name: chirp_trip
+description: "啾旅 · 黄色主题旅行内容社区（学习项目，非商用）"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  # 平台自适应组件库：AdaptiveApp / AdaptiveScaffold / 表单 / 弹窗 / 设置项
+  adaptive_platform_ui: ^1.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
