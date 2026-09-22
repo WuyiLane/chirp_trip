@@ -8,7 +8,7 @@ import 'chick_face.dart';
 import 'common.dart';
 
 /// 底部导航：悬浮的毛玻璃胶囊（iOS 26 风格）+ 中间凸起的黄色「+」（设计稿动效 1），
-/// 选中态是一片纯白玻璃药丸，换 tab 时滑过去（[_SlidingPill]）。
+/// 选中态是一片透明毛玻璃药丸，换 tab 时滑过去（[_SlidingPill]）。
 /// 四个 tab 图标都是手绘矢量（[_GlyphPainter] / [ChickFace]），带「表情」：
 /// 选中时用弹性曲线把表情进度 t 从 0 推到 1——房子的门弯成笑嘴、发现的瞳孔转正变实、
 /// 消息气泡嘴角上扬、小鸡脸填黄泛腮红，同时整个图标弹一下。
@@ -188,7 +188,7 @@ class ChickTabBar extends StatelessWidget {
   }
 }
 
-/// 选中态药丸：一片纯白的玻璃（再模糊一层 + 白色亮边 + 外侧软阴影，没有渐变），
+/// 选中态药丸：一片透明的毛玻璃（再模糊一层、几乎不填色、白色亮边 + 外侧软阴影），
 /// 换 tab 时滑到新位置（带一点回弹），滑行途中横向拉长再缩回，模仿 iOS 26 液态玻璃那种「被拽着走」的感觉。
 class _SlidingPill extends StatelessWidget {
   const _SlidingPill({required this.slot, required this.slotIndex});
@@ -228,13 +228,13 @@ class _SlidingPill extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: r,
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       borderRadius: r,
-                      // 纯白一块，靠外侧阴影从胶囊上凸出来
-                      color: Colors.white.withValues(alpha: 0.92),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.95), width: 1.2),
+                      // 几乎全透明，只压一点点暗把它和胶囊分开：底下模糊的内容透上来，就是玻璃片的感觉
+                      color: Colors.black.withValues(alpha: 0.06),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
                     ),
                   ),
                 ),
