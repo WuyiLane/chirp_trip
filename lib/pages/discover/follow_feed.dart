@@ -19,14 +19,18 @@ import '../post/post_detail_page.dart';
 /// 发布成功后（设计稿动效 8 结尾）：标题下弹出黄色药丸「发布成功」，
 /// 新帖子从顶部撑开插进来，把下面的列表推下去。
 class FollowFeed extends StatefulWidget {
-  const FollowFeed({super.key});
+  const FollowFeed({super.key, this.topPadding = 0});
+
+  /// 发现页顶部毛玻璃栏的高度：列表铺满整页，从这个高度开始摆内容，滚动时从栏底下过去
+  final double topPadding;
 
   @override
   State<FollowFeed> createState() => _FollowFeedState();
 }
 
 class _FollowFeedState extends State<FollowFeed> {
-  final _listKey = GlobalKey<AnimatedListState>();
+  final _listKey = GlobalKey<SliverAnimatedListState>();
+  final _scroll = ScrollController();
   final _posts = List<Post>.of(Mock.posts);
   String? _banner;
   Timer? _bannerTimer;
@@ -43,6 +47,7 @@ class _FollowFeedState extends State<FollowFeed> {
   void dispose() {
     publishedPost.removeListener(_onPublished);
     _bannerTimer?.cancel();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -54,6 +59,8 @@ class _FollowFeedState extends State<FollowFeed> {
     // 等编辑页 / 面板退场、tab 切过来之后再插，动画才看得见
     Future.delayed(const Duration(milliseconds: 600), () {
       if (!mounted || _posts.any((x) => x.id == p.id)) return;
+      // 药丸和新帖都在列表顶部，之前滚下去了就先回到顶上，不然插入动画看不到
+      if (_scroll.hasClients && _scroll.offset > 0) _scroll.jumpTo(0);
       _posts.insert(0, p);
       _listKey.currentState?.insertItem(0, duration: const Duration(milliseconds: 480));
       setState(() => _banner = '发布成功');
@@ -66,14 +73,19 @@ class _FollowFeedState extends State<FollowFeed> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        PillBanner(text: _banner),
-        Expanded(
-          child: AnimatedList(
+    // 药丸和列表放在同一个滚动区里，整体才能从毛玻璃栏底下滚过去
+    return CustomScrollView(
+      controller: _scroll,
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.only(top: widget.topPadding),
+          sliver: SliverToBoxAdapter(child: PillBanner(text: _banner)),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.only(top: 4, bottom: ChickTabBar.height + 40),
+          sliver: SliverAnimatedList(
             key: _listKey,
             initialItemCount: _posts.length,
-            padding: EdgeInsets.only(top: 4, bottom: ChickTabBar.height + 40),
             itemBuilder: (_, i, anim) => SizeTransition(
               sizeFactor: CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
               child: FadeTransition(

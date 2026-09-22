@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../../app/events.dart';
@@ -13,7 +15,7 @@ import '../topic/topic_list_page.dart';
 import 'category_page.dart';
 import 'follow_feed.dart';
 
-/// 发现页：顶部「发现 / 关注」切换，发现是分类入口 + 网友热推瀑布流，关注是时间线。
+/// 发现页：顶部「发现 / 关注」是一条毛玻璃栏，两个列表从它底下滚过；发现是分类入口 + 网友热推瀑布流，关注是时间线。
 /// 发布成功后自动切到「关注」，让新帖子插进来的动画能被看到。
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
@@ -49,33 +51,48 @@ class _DiscoverPageState extends State<DiscoverPage> {
     _pager.animateToPage(i, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
   }
 
+  /// 顶部栏高度（不含状态栏）：12 上边距 + 40 一行 + 8 下边距
+  static const _headerHeight = 60.0;
+
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
-    return Column(
+    final header = top + _headerHeight;
+    return Stack(
       children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(16, top + 12, 16, 8),
-          child: Row(
-            children: [
-              _TabTitle('发现', selected: _tab == 0, onTap: () => _goTo(0)),
-              const SizedBox(width: 18),
-              _TabTitle('关注', selected: _tab == 1, onTap: () => _goTo(1)),
-              const Spacer(),
-              RoundIconButton(
-                icon: Icons.search,
-                background: Colors.transparent,
-                size: 40,
-                onTap: () => push(context, const SearchPage()),
-              ),
-            ],
-          ),
+        // 两个列表铺满整页、顶部各留出头部的高度，滚动时内容从毛玻璃头部底下过去
+        PageView(
+          controller: _pager,
+          onPageChanged: (i) => setState(() => _tab = i),
+          children: [_DiscoverBody(topPadding: header), FollowFeed(topPadding: header)],
         ),
-        Expanded(
-          child: PageView(
-            controller: _pager,
-            onPageChanged: (i) => setState(() => _tab = i),
-            children: const [_DiscoverBody(), FollowFeed()],
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: Container(
+                height: header,
+                color: Colors.white.withValues(alpha: 0.78),
+                padding: EdgeInsets.fromLTRB(16, top + 12, 16, 8),
+                child: Row(
+                  children: [
+                    _TabTitle('发现', selected: _tab == 0, onTap: () => _goTo(0)),
+                    const SizedBox(width: 18),
+                    _TabTitle('关注', selected: _tab == 1, onTap: () => _goTo(1)),
+                    const Spacer(),
+                    RoundIconButton(
+                      icon: Icons.search,
+                      background: Colors.transparent,
+                      size: 40,
+                      onTap: () => push(context, const SearchPage()),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -108,7 +125,10 @@ class _TabTitle extends StatelessWidget {
 }
 
 class _DiscoverBody extends StatelessWidget {
-  const _DiscoverBody();
+  const _DiscoverBody({required this.topPadding});
+
+  /// 顶部毛玻璃栏的高度，列表从这里往下开始
+  final double topPadding;
 
   static const _categories = [
     ('攻略', Icons.menu_book_rounded, Color(0xFFFFC107)),
@@ -132,7 +152,7 @@ class _DiscoverBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: EdgeInsets.only(bottom: ChickTabBar.height + 40),
+      padding: EdgeInsets.only(top: topPadding, bottom: ChickTabBar.height + 40),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
