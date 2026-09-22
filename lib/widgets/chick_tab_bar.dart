@@ -188,8 +188,8 @@ class ChickTabBar extends StatelessWidget {
   }
 }
 
-/// 选中态药丸：淡黄半透明，换 tab 时滑到新位置（带一点回弹），
-/// 滑行途中横向拉长再缩回，模仿 iOS 26 液态玻璃那种「被拽着走」的感觉。
+/// 选中态药丸：一片中性色的玻璃（再模糊一层 + 左上亮右下灰的渐变 + 白色亮边 + 外侧软阴影），
+/// 换 tab 时滑到新位置（带一点回弹），滑行途中横向拉长再缩回，模仿 iOS 26 液态玻璃那种「被拽着走」的感觉。
 class _SlidingPill extends StatelessWidget {
   const _SlidingPill({required this.slot, required this.slotIndex});
 
@@ -211,15 +211,37 @@ class _SlidingPill extends StatelessWidget {
         builder: (_, t, _) {
           final stretch = 18 * math.sin(t * math.pi);
           final w = ChickTabBar._pillWidth + stretch;
+          final r = BorderRadius.circular(ChickTabBar._pillHeight / 2);
           return Positioned(
             left: slot * s + (slot - w) / 2,
             top: (ChickTabBar.height - ChickTabBar._pillHeight) / 2,
             width: w,
             height: ChickTabBar._pillHeight,
             child: DecoratedBox(
+              // 阴影只画外侧，把玻璃片从胶囊上托起来
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.26),
-                borderRadius: BorderRadius.circular(ChickTabBar._pillHeight / 2),
+                borderRadius: r,
+                boxShadow: const [
+                  BoxShadow(color: Color(0x24000000), blurRadius: 10, offset: Offset(0, 3), blurStyle: BlurStyle.outer),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: r,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: r,
+                      // 左上亮、右下带点灰：像一片微微凸起的玻璃
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Colors.white.withValues(alpha: 0.92), const Color(0xFFE3E5E8).withValues(alpha: 0.7)],
+                      ),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.95), width: 1.2),
+                    ),
+                  ),
+                ),
               ),
             ),
           );
