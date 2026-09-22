@@ -254,6 +254,7 @@ class RedDot extends StatelessWidget {
 /// 飞行途中用 FittedBox 等比缩放，避免小字被拉成大字的形变。
 Widget textHero(String tag, String text, TextStyle style) {
   return Hero(
+    transitionOnUserGestures: true,
     tag: tag,
     flightShuttleBuilder: (_, _, _, _, toContext) => Material(
       type: MaterialType.transparency,

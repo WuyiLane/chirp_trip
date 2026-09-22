@@ -53,7 +53,7 @@ class _TopicRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: PressScale(
-        onTap: () => pushFade(context, TopicPage(topic, heroTag: tag)),
+        onTap: () => push(context, TopicPage(topic, heroTag: tag)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -89,6 +89,7 @@ class _TopicRow extends StatelessWidget {
             AspectRatio(
               aspectRatio: 16 / 9,
               child: Hero(
+                transitionOnUserGestures: true,
                 tag: tag,
                 child: NetImage(topic.cover, radius: AppRadius.lg),
               ),

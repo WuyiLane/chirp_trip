@@ -17,7 +17,7 @@
 | 发现 / 关注 | `pages/discover/` | 5 个分类入口 + 网友热推瀑布流；关注是时间线 |
 | 话题页 | `pages/topic/` | 封面 + 悬浮信息卡 + 主页/讨论 + 瀑布流 |
 | 随笔详情 | `pages/post/` | 图片轮播、折叠头、正文、评论、相关推荐 |
-| 发布流程 | `pages/publish/` | 类型面板 → 相册多选 → 编辑发布 |
+| 发布流程 | `pages/publish/` | 类型面板 → 相册多选（读手机相册，相机格子拍照）→ 编辑发布 |
 | 消息 | `pages/message/` | 通知 / 评论 / 私信 / 客服，私信左滑删除 |
 | 我的 / TA 的主页 | `pages/mine/` | 黄色头部 + 随笔/游记/收藏 |
 | 设置 | `pages/mine/settings_page.dart` | adaptive 表单组件 |
@@ -30,14 +30,18 @@
 3. **登录**：手机号满 11 位「获取验证码」由浅黄变实心黄 → 切到 6 格验证码，每格数字弹入，填满自动进主壳 —— `pages/auth/login_page.dart`
 4. **首页下拉刷新**：标题下拉出黄色弧线 → 松手转圈 → 变成药丸「已为您更新10条推荐内容」→ 收起 —— `pages/home/home_page.dart`
 5. **热门目的地 → 城市 → 景点**：城市卡片从左上角错落散开飞入，点开一张其余反向散开；城市页景点卡片轮播（图探出卡片、两侧缩小变淡）；点卡片图片 Hero 长成全宽头图 —— `pages/destination/`
-6. **发现 → 详情**：卡片封面 Hero 原位放大成头图，其余淡入；往上滚大图折叠成「头像 + 昵称 + 关注TA」；点赞变红弹跳、数字 +1；点头图 → 全屏看图（黑底、左右滑、双指捏合 / 双击放大、单击关闭，头图 Hero 长成全屏图再缩回） —— `widgets/post_card.dart` / `pages/post/` / `widgets/like_button.dart`
+6. **发现 → 详情**：卡片封面 Hero 原位放大成头图，页面本体从右滑入（小红书式），左边缘右滑可跟手返回、封面跟着飞回；往上滚大图折叠成「头像 + 昵称 + 关注TA」；点赞变红弹跳、数字 +1；点头图 → 全屏看图（黑底、左右滑、双指捏合 / 双击放大、单击关闭，头图 Hero 长成全屏图再缩回） —— `widgets/post_card.dart` / `pages/post/` / `widgets/like_button.dart`
 7. **发现 → 话题**：分类标签文字 Hero 飞过去变成列表页标题；话题页封面 Hero、信息卡弹入、瀑布流卡片错落飞入；信息卡与「主页 / 讨论」吸顶，黄色下划线滑动切换 —— `pages/topic/`
 8. **发布**：面板滑出、四个类型图标错落弹起、× 旋转出现；相册从底部滑入，勾选时黄色序号弹簧弹出；下一步时选中的图 Hero 飞进编辑页缩略图行；发布后回到「关注」，新帖从顶部撑开插入 + 药丸「发布成功」 —— `pages/publish/` / `pages/discover/follow_feed.dart`
 9. **消息**：圆形分类 tab 黄色高亮抬起 + 列表淡入；私信左滑删除三档：左滑露出红色「删除」→ 点它行再左推、红块长成方角「确认删除」→ 再点行飞出、红块横扫全宽变淡、行高折叠消失；同时只能有一行处于删除态（互斥） —— `pages/message/message_page.dart`
 
 10. **我的 / TA 的主页**：黄色大头部随上滑半速上移并淡出，滚到位后换成「昵称 + 搜索我的内容 + 设置」的紧凑栏吸顶，胶囊 tab 行吸在它下面，瀑布流在下面继续滚（抖音「我」页式折叠头） —— `pages/mine/profile_page.dart`
+11. **首页**：状态栏留白，「今日推荐」吸顶，滚到底上拉加载下一页；底栏是毛玻璃托盘（半透白 + 背景模糊，形状不变） —— `pages/home/home_page.dart` / `widgets/chick_tab_bar.dart`
+12. **发现 / 关注**：装在 PageView 里，点标题或左右滑都能切 —— `pages/discover/discover_page.dart`
 
-公共件：`widgets/entrance.dart`（错落入场）、`widgets/pill_banner.dart`（黄色药丸提示）、`app/routes.dart`（淡入 / 上滑转场，配合 Hero）、`app/events.dart`（发布成功事件）。
+公共件：`widgets/entrance.dart`（错落入场）、`widgets/pill_banner.dart`（黄色药丸提示）、`app/routes.dart`（子页 iOS 式右滑推入 + 边缘侧滑返回、发布相册底部滑入，配合 Hero）、`app/events.dart`（发布成功事件）。
+
+iOS 注意：`AdaptiveApp` 在 iOS 走 CupertinoApp，Material 主题靠 `main.dart` 里 `builder` 包的一层 `Theme` 生效；相册 / 相机权限说明在 `ios/Runner/Info.plist`。
 
 ## 技术
 

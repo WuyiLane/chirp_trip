@@ -31,7 +31,7 @@ class _DestinationPageState extends State<DestinationPage> {
     await Future.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
     final city = widget.destination.cities[i];
-    await pushFade(context, CityPage(city, heroTag: _heroTag(i)));
+    await push(context, CityPage(city, heroTag: _heroTag(i)));
     if (mounted) setState(() => _opening = null);
   }
 
@@ -109,6 +109,7 @@ class _CityCard extends StatelessWidget {
         children: [
           Expanded(
             child: Hero(
+              transitionOnUserGestures: true,
               tag: heroTag,
               child: NetImage(city.cover, radius: AppRadius.lg),
             ),

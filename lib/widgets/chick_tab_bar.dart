@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
@@ -32,6 +34,7 @@ class ChickTabBar extends StatelessWidget {
   final bool messageDot;
 
   static const height = 64.0;
+  static const _radius = BorderRadius.vertical(top: Radius.circular(24));
 
   @override
   Widget build(BuildContext context) {
@@ -42,25 +45,41 @@ class ChickTabBar extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
         children: [
+          // 毛玻璃托盘：半透明白 + 背景模糊，页面内容从底下滚过时透出来。
+          // 阴影用 outer 只画在托盘外面，不然会透过半透明底把托盘压暗。
           Container(
             height: height + bottom,
-            padding: EdgeInsets.only(bottom: bottom),
             decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 16, offset: Offset(0, -4))],
-            ),
-            child: Row(
-              children: [
-                _item(0, (t) => _homeGlyph(t)),
-                _item(1, (t) => _GlyphIcon(_Glyph.discover, t)),
-                const Expanded(child: SizedBox()),
-                _item(
-                  2,
-                  (t) => RedDot(show: messageDot, offset: const Offset(-2, 0), child: _GlyphIcon(_Glyph.message, t)),
-                ),
-                _item(3, (t) => ChickFace(size: 30, progress: t)),
+              borderRadius: _radius,
+              boxShadow: [
+                BoxShadow(color: Color(0x1A000000), blurRadius: 16, offset: Offset(0, -4), blurStyle: BlurStyle.outer),
               ],
+            ),
+            child: ClipRRect(
+              borderRadius: _radius,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: Container(
+                  color: Colors.white.withValues(alpha: 0.78),
+                  padding: EdgeInsets.only(bottom: bottom),
+                  child: Row(
+                    children: [
+                      _item(0, (t) => _homeGlyph(t)),
+                      _item(1, (t) => _GlyphIcon(_Glyph.discover, t)),
+                      const Expanded(child: SizedBox()),
+                      _item(
+                        2,
+                        (t) => RedDot(
+                          show: messageDot,
+                          offset: const Offset(-2, 0),
+                          child: _GlyphIcon(_Glyph.message, t),
+                        ),
+                      ),
+                      _item(3, (t) => ChickFace(size: 30, progress: t)),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
           // 凸起的「+」

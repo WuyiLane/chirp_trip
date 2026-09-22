@@ -1,21 +1,19 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
-/// 淡入转场：配合 Hero 使用——Hero 负责「卡片 / 图片飞过去、放大」，
-/// 页面其余部分淡入。发现 → 详情、话题、目的地这类「从卡片点进去」的场景都用它。
-class FadeRoute<T> extends PageRouteBuilder<T> {
-  FadeRoute({required Widget page})
-    : super(
-        transitionDuration: const Duration(milliseconds: 420),
-        reverseTransitionDuration: const Duration(milliseconds: 320),
-        pageBuilder: (_, _, _) => page,
-        transitionsBuilder: (_, animation, _, child) => FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-          child: child,
-        ),
-      );
+/// 子页统一用 iOS 那套推入：新页从右边滑进来、旧页跟着往左退一点带阴影，
+/// 从左边缘右滑可以跟手返回（小红书 / 微信那种）。
+/// 配合 Hero 用：Hero 负责「封面飞过去放大」，页面本体滑入；
+/// 返回手势时 Hero 也跟手飞回（各处 Hero 都开了 transitionOnUserGestures）。
+/// 发现 → 详情、话题、目的地、设置这类「点进去」的场景都用它。
+class SlideRoute<T> extends CupertinoPageRoute<T> {
+  SlideRoute({required Widget page}) : super(builder: (_) => page);
+
+  // 默认 500ms 偏慢，接近原生的 350ms 左右手感更利落
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 380);
 }
 
-/// 从底部滑入：发布流程里的相册页。
+/// 从底部滑入：发布流程里的相册页（模态，不带侧滑返回）。
 class SlideUpRoute<T> extends PageRouteBuilder<T> {
   SlideUpRoute({required Widget page})
     : super(
@@ -32,14 +30,10 @@ class SlideUpRoute<T> extends PageRouteBuilder<T> {
       );
 }
 
-Future<T?> pushFade<T>(BuildContext context, Widget page) {
-  return Navigator.of(context).push<T>(FadeRoute<T>(page: page));
-}
-
 Future<T?> pushSlideUp<T>(BuildContext context, Widget page) {
   return Navigator.of(context).push<T>(SlideUpRoute<T>(page: page));
 }
 
 Future<T?> push<T>(BuildContext context, Widget page) {
-  return Navigator.of(context).push<T>(MaterialPageRoute(builder: (_) => page));
+  return Navigator.of(context).push<T>(SlideRoute<T>(page: page));
 }

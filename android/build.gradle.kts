@@ -1,7 +1,18 @@
 allprojects {
     repositories {
+        // 同 settings.gradle.kts：先走阿里云镜像
+        maven("https://maven.aliyun.com/repository/google")
+        maven("https://maven.aliyun.com/repository/public")
         google()
         mavenCentral()
+    }
+    // 插件（photo_manager 等）自己的 buildscript 只写了 google / mavenCentral，
+    // 它们的 classpath 下载不走上面的列表，这里再给一份镜像
+    buildscript {
+        repositories {
+            maven("https://maven.aliyun.com/repository/google")
+            maven("https://maven.aliyun.com/repository/public")
+        }
     }
 }
 

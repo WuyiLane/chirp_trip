@@ -43,11 +43,18 @@ class _HomePageState extends State<HomePage> {
   double _pull = 0;
   bool _dragging = false;
 
+  /// 今日推荐已经加载出来的帖子：先取一页，滚到底再从 Mock.posts 里往后补一页
+  final _feed = <Post>[];
+  bool _loadingMore = false;
+  bool _noMore = false;
+  static const _pageSize = 5;
+
   @override
   void initState() {
     super.initState();
     widget.refreshSignal?.addListener(_onSignal);
     _scroll.addListener(_onOffset);
+    _feed.addAll(Mock.posts.take(_pageSize));
   }
 
   @override
@@ -89,9 +96,25 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() => _phase = _RefreshPhase.idle);
   }
 
+  /// 上拉加载更多：模拟一次网络请求，再从 Mock.posts 里补一页；全部取完就标「没有更多了」
+  Future<void> _loadMore() async {
+    if (_loadingMore || _noMore) return;
+    setState(() => _loadingMore = true);
+    await Future.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+    setState(() {
+      _feed.addAll(Mock.posts.where((p) => !_feed.contains(p)).take(_pageSize));
+      _loadingMore = false;
+      _noMore = _feed.length >= Mock.posts.length;
+    });
+  }
+
   bool _onScroll(ScrollNotification n) {
     // 只看最外层列表，里面横向的目的地列表 / banner 滚动不算
-    if (n.depth != 0 || _phase != _RefreshPhase.idle) return false;
+    if (n.depth != 0) return false;
+    // 离底部不到 200px 就开始加载下一页
+    if (n is ScrollUpdateNotification && n.metrics.extentAfter < 200) _loadMore();
+    if (_phase != _RefreshPhase.idle) return false;
     if (n is OverscrollNotification && n.overscroll < 0 && n.dragDetails != null) {
       // 顶部继续往下拉：过度滚动的距离打个折累加，手感更「有阻力」
       _dragging = true;
@@ -111,92 +134,112 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
     return NotificationListener<ScrollNotification>(
       onNotification: _onScroll,
       // 去掉 Android 自带的拉伸 / 光晕，只留我们自己的弧线
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
-        child: ListView(
-          controller: _scroll,
-          physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
-          padding: EdgeInsets.only(top: top + 12, bottom: ChickTabBar.height + 40),
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Hi, 小啾 👋', style: AppText.pageTitle),
-                        SizedBox(height: 2),
-                        Text('今天想去哪儿？', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  Avatar(Mock.me.avatar, size: 44),
-                ],
+        // 状态栏那一条留白（白底），内容不再滚到时间 / 电量底下；「今日推荐」吸顶时也停在它下面
+        child: SafeArea(
+          bottom: false,
+          child: CustomScrollView(
+            controller: _scroll,
+            physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.only(top: 12),
+                sliver: SliverList.list(children: _head()),
               ),
-            ),
-            _refreshSlot(),
-            const SizedBox(height: 18),
-            // 搜索框（点了进搜索页）
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GestureDetector(
-                onTap: () => push(context, const SearchPage()),
-                child: Container(
-                  height: 46,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(color: AppColors.inputBg, borderRadius: BorderRadius.circular(23)),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.search, color: AppColors.textSecondary),
-                      SizedBox(width: 8),
-                      Text('搜目的地、攻略、游记', style: TextStyle(color: AppColors.textHint, fontSize: 14)),
-                    ],
-                  ),
-                ),
+              // 「今日推荐」吸顶，下面的卡片从它底下滚过去
+              SliverPersistentHeader(pinned: true, delegate: _StickyHeader(SectionHeader('今日推荐', trailing: _more()))),
+              SliverList.builder(
+                itemCount: _feed.length + 1,
+                itemBuilder: (_, i) => i < _feed.length
+                    // tag 带上下标：数据源里同一条帖子不会因为翻页出现两个相同的 Hero
+                    ? _RecommendRow(_feed[i], heroTag: 'home-$i-${_feed[i].id}')
+                    : _LoadMoreFooter(loading: _loadingMore, noMore: _noMore),
               ),
-            ),
-            const SizedBox(height: 20),
-            _TopicBanner(Mock.topics),
-            SectionHeader('热门目的地', trailing: _more()),
-            SizedBox(
-              height: 96,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _destinations.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 14),
-                itemBuilder: (_, i) {
-                  final d = _destinations[i];
-                  return PressScale(
-                    scale: 0.9,
-                    onTap: () => pushFade(context, DestinationPage(d)),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.primary),
-                          child: ClipOval(child: NetImage(d.cover, width: 60, height: 60)),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(d.name, style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            SectionHeader('今日推荐', trailing: _more()),
-            for (final p in Mock.posts.take(5)) _RecommendRow(p),
-          ],
+              const SliverToBoxAdapter(child: SizedBox(height: ChickTabBar.height + 40)),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// 「今日推荐」上面那一截：问候、搜索、话题轮播、热门目的地
+  List<Widget> _head() {
+    return [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Hi, 小啾 👋', style: AppText.pageTitle),
+                  SizedBox(height: 2),
+                  Text('今天想去哪儿？', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+            Avatar(Mock.me.avatar, size: 44),
+          ],
+        ),
+      ),
+      _refreshSlot(),
+      const SizedBox(height: 18),
+      // 搜索框（点了进搜索页）
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: GestureDetector(
+          onTap: () => push(context, const SearchPage()),
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(color: AppColors.inputBg, borderRadius: BorderRadius.circular(23)),
+            child: const Row(
+              children: [
+                Icon(Icons.search, color: AppColors.textSecondary),
+                SizedBox(width: 8),
+                Text('搜目的地、攻略、游记', style: TextStyle(color: AppColors.textHint, fontSize: 14)),
+              ],
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 20),
+      _TopicBanner(Mock.topics),
+      SectionHeader('热门目的地', trailing: _more()),
+      SizedBox(
+        height: 96,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: _destinations.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 14),
+          itemBuilder: (_, i) {
+            final d = _destinations[i];
+            return PressScale(
+              scale: 0.9,
+              onTap: () => push(context, DestinationPage(d)),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.primary),
+                    child: ClipOval(child: NetImage(d.cover, width: 60, height: 60)),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(d.name, style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    ];
   }
 
   /// 标题下方的刷新槽：下拉时高度跟手，刷新中固定 48，空闲收成 0
@@ -332,7 +375,7 @@ class _TopicBannerState extends State<_TopicBanner> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: PressScale(
-                  onTap: () => pushFade(context, TopicPage(t, heroTag: tag)),
+                  onTap: () => push(context, TopicPage(t, heroTag: tag)),
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.primary,
@@ -364,7 +407,7 @@ class _TopicBannerState extends State<_TopicBanner> {
                         ),
                         SizedBox(
                           width: 140,
-                          child: Hero(tag: tag, child: NetImage(t.cover)),
+                          child: Hero(transitionOnUserGestures: true, tag: tag, child: NetImage(t.cover)),
                         ),
                       ],
                     ),
@@ -396,19 +439,74 @@ class _TopicBannerState extends State<_TopicBanner> {
   }
 }
 
-/// 今日推荐的横向卡片：左图右文；左图 Hero 飞到详情页头图
-class _RecommendRow extends StatelessWidget {
-  const _RecommendRow(this.post);
+/// 吸顶的区块标题：固定高度、白底，盖住从底下滚过去的卡片
+class _StickyHeader extends SliverPersistentHeaderDelegate {
+  const _StickyHeader(this.child);
 
-  final Post post;
+  final Widget child;
+
+  static const _height = 56.0;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox.expand(
+      child: ColoredBox(color: Colors.white, child: child),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_StickyHeader old) => old.child != child;
+}
+
+/// 列表底部：加载中转圈 + 「加载中…」；全部取完显示「没有更多了」；否则留一段空白给手指上拉
+class _LoadMoreFooter extends StatelessWidget {
+  const _LoadMoreFooter({required this.loading, required this.noMore});
+
+  final bool loading;
+  final bool noMore;
 
   @override
   Widget build(BuildContext context) {
-    final tag = 'home-${post.id}';
+    return SizedBox(
+      height: 48,
+      child: Center(
+        child: loading
+            ? const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(width: 18, height: 18, child: _SpinningArc()),
+                  SizedBox(width: 8),
+                  Text('加载中…', style: AppText.caption),
+                ],
+              )
+            : noMore
+            ? const Text('— 没有更多了 —', style: AppText.caption)
+            : null,
+      ),
+    );
+  }
+}
+
+/// 今日推荐的横向卡片：左图右文；左图 Hero 飞到详情页头图
+class _RecommendRow extends StatelessWidget {
+  const _RecommendRow(this.post, {required this.heroTag});
+
+  final Post post;
+  final String heroTag;
+
+  @override
+  Widget build(BuildContext context) {
+    final tag = heroTag;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: PressScale(
-        onTap: () => pushFade(context, PostDetailPage(post, heroTag: tag)),
+        onTap: () => push(context, PostDetailPage(post, heroTag: tag)),
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -419,6 +517,7 @@ class _RecommendRow extends StatelessWidget {
           child: Row(
             children: [
               Hero(
+                transitionOnUserGestures: true,
                 tag: tag,
                 child: NetImage(post.cover, width: 96, height: 96, radius: AppRadius.md),
               ),

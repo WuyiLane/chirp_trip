@@ -206,6 +206,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     final tag = widget.heroTag;
     if (tag == null) return child;
     return Hero(
+      transitionOnUserGestures: true,
       tag: tag,
       flightShuttleBuilder: (_, anim, _, fromCtx, toCtx) => AnimatedBuilder(
         animation: anim,

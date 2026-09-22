@@ -188,7 +188,7 @@ class _ZoomableImageState extends State<_ZoomableImage> with SingleTickerProvide
         // 没放大时不接管单指拖动，横滑交给 PageView 翻页
         panEnabled: _zoomed,
         child: Center(
-          child: widget.heroTag == null ? image : Hero(tag: widget.heroTag!, child: image),
+          child: widget.heroTag == null ? image : Hero(transitionOnUserGestures: true, tag: widget.heroTag!, child: image),
         ),
       ),
     );

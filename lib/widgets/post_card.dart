@@ -21,9 +21,7 @@ class PostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cover = AspectRatio(aspectRatio: post.coverRatio, child: NetImage(post.cover));
     return PressScale(
-      onTap: () => heroTag == null
-          ? push(context, PostDetailPage(post))
-          : pushFade(context, PostDetailPage(post, heroTag: heroTag)),
+      onTap: () => push(context, PostDetailPage(post, heroTag: heroTag)),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.card,
@@ -36,7 +34,7 @@ class PostCard extends StatelessWidget {
           children: [
             Stack(
               children: [
-                heroTag == null ? cover : Hero(tag: heroTag!, child: cover),
+                heroTag == null ? cover : Hero(transitionOnUserGestures: true, tag: heroTag!, child: cover),
                 Positioned(left: 8, bottom: 8, child: LocationTag(post.location)),
               ],
             ),

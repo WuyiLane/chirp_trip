@@ -86,7 +86,7 @@ class _CityPageState extends State<CityPage> {
                         heroTag: _tag(i),
                         scale: 1 - d * 0.08,
                         textOpacity: 1 - d * 0.55,
-                        onTap: () => pushFade(context, SpotPage(spots[i], heroTag: _tag(i))),
+                        onTap: () => push(context, SpotPage(spots[i], heroTag: _tag(i))),
                       );
                     },
                   ),
@@ -170,7 +170,7 @@ class _SpotCard extends StatelessWidget {
                 right: 12,
                 top: 0,
                 height: _imageHeight,
-                child: Hero(tag: heroTag, child: NetImage(spot.cover, radius: 16)),
+                child: Hero(transitionOnUserGestures: true, tag: heroTag, child: NetImage(spot.cover, radius: 16)),
               ),
               // 黄色收藏星：压在图片右下角、卡片右边缘
               Positioned(

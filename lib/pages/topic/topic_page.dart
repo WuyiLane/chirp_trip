@@ -154,7 +154,7 @@ class _TopicHeader extends SliverPersistentHeaderDelegate {
             right: 0,
             child: Opacity(
               opacity: 1 - t,
-              child: heroTag == null ? cover : Hero(tag: heroTag!, child: cover),
+              child: heroTag == null ? cover : Hero(transitionOnUserGestures: true, tag: heroTag!, child: cover),
             ),
           ),
           Positioned(

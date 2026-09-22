@@ -87,6 +87,7 @@ class _EditorPageState extends State<EditorPage> {
                   );
                 }
                 return Hero(
+                  transitionOnUserGestures: true,
                   tag: 'photo-${widget.images[i]}',
                   child: NetImage(widget.images[i], width: 96, height: 96, radius: AppRadius.md),
                 );

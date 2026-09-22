@@ -342,8 +342,5 @@ abstract final class Mock {
     ('海滨栈道', 4.9, '沿海走一圈大概四十分钟，路很平，推婴儿车也没问题。\n\n中段有个小码头，拍照很出片。'),
   ];
 
-  /// 相册九宫格用的 20 张图（发布流程）
-  static final albumPhotos = List.generate(20, (i) => pic('album$i', w: 400, h: 400));
-
   static List<Post> ofType(PostType type) => posts.where((p) => p.type == type).toList();
 }

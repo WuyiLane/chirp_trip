@@ -141,7 +141,7 @@ class _FeedCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             GestureDetector(
-              onTap: () => pushFade(context, PostDetailPage(post, heroTag: tag)),
+              onTap: () => push(context, PostDetailPage(post, heroTag: tag)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -182,6 +182,7 @@ class _ImageGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     const r = AppRadius.md;
     final first = Hero(
+      transitionOnUserGestures: true,
       tag: heroTag,
       child: NetImage(images[0], radius: r),
     );
@@ -192,6 +193,8 @@ class _ImageGrid extends StatelessWidget {
       return AspectRatio(
         aspectRatio: 2,
         child: Row(
+          // 拉满格子：真机照片有横有竖，不拉满的话横图会上下留白
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(child: first),
             const SizedBox(width: 6),
@@ -203,12 +206,14 @@ class _ImageGrid extends StatelessWidget {
     return AspectRatio(
       aspectRatio: 16 / 10,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(flex: 3, child: first),
           const SizedBox(width: 6),
           Expanded(
             flex: 2,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: NetImage(images[1], radius: r)),
                 const SizedBox(height: 6),

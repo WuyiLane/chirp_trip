@@ -25,6 +25,9 @@ class DiscoverPage extends StatefulWidget {
 class _DiscoverPageState extends State<DiscoverPage> {
   int _tab = 0;
 
+  /// 两个 tab 装在 PageView 里：点标题或左右滑都能切，标题跟着页变
+  final _pager = PageController();
+
   @override
   void initState() {
     super.initState();
@@ -34,11 +37,16 @@ class _DiscoverPageState extends State<DiscoverPage> {
   @override
   void dispose() {
     publishedPost.removeListener(_onPublished);
+    _pager.dispose();
     super.dispose();
   }
 
   void _onPublished() {
-    if (publishedPost.value != null && mounted) setState(() => _tab = 1);
+    if (publishedPost.value != null && mounted) _goTo(1);
+  }
+
+  void _goTo(int i) {
+    _pager.animateToPage(i, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
   }
 
   @override
@@ -50,9 +58,9 @@ class _DiscoverPageState extends State<DiscoverPage> {
           padding: EdgeInsets.fromLTRB(16, top + 12, 16, 8),
           child: Row(
             children: [
-              _TabTitle('发现', selected: _tab == 0, onTap: () => setState(() => _tab = 0)),
+              _TabTitle('发现', selected: _tab == 0, onTap: () => _goTo(0)),
               const SizedBox(width: 18),
-              _TabTitle('关注', selected: _tab == 1, onTap: () => setState(() => _tab = 1)),
+              _TabTitle('关注', selected: _tab == 1, onTap: () => _goTo(1)),
               const Spacer(),
               RoundIconButton(
                 icon: Icons.search,
@@ -64,9 +72,10 @@ class _DiscoverPageState extends State<DiscoverPage> {
           ),
         ),
         Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: _tab == 0 ? const _DiscoverBody(key: ValueKey(0)) : const FollowFeed(key: ValueKey(1)),
+          child: PageView(
+            controller: _pager,
+            onPageChanged: (i) => setState(() => _tab = i),
+            children: const [_DiscoverBody(), FollowFeed()],
           ),
         ),
       ],
@@ -99,7 +108,7 @@ class _TabTitle extends StatelessWidget {
 }
 
 class _DiscoverBody extends StatelessWidget {
-  const _DiscoverBody({super.key});
+  const _DiscoverBody();
 
   static const _categories = [
     ('攻略', Icons.menu_book_rounded, Color(0xFFFFC107)),
@@ -117,7 +126,7 @@ class _DiscoverBody extends StatelessWidget {
       3 => const CategoryPage(PostType.qa),
       _ => const CategoryPage(PostType.diary),
     };
-    pushFade(context, page);
+    push(context, page);
   }
 
   @override

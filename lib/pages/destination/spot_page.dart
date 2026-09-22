@@ -44,7 +44,7 @@ class _SpotPageState extends State<SpotPage> {
             ),
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.pin,
-              background: Hero(tag: widget.heroTag, child: NetImage(spot.cover)),
+              background: Hero(transitionOnUserGestures: true, tag: widget.heroTag, child: NetImage(spot.cover)),
             ),
           ),
           SliverToBoxAdapter(
