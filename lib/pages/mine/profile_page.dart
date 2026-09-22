@@ -13,7 +13,7 @@ import 'settings_page.dart';
 
 /// 个人主页：黄色头部（头像 / 昵称 / 简介 / 关注·粉丝·获赞）+ 白色圆角内容区（随笔 / 游记 / 收藏）。
 /// 往上滚：大头部一边上移一边淡出，滚到位后换成一条紧凑栏（昵称 + 搜索框 + 设置）吸在顶上，
-/// 胶囊 tab 行吸在紧凑栏下面，瀑布流在下面继续滚（抖音「我」页那种折叠头）。
+/// 胶囊 tab 行贴在紧凑栏下面，三个 tab 装在 PageView 里可以左右滑，各自的瀑布流在下面继续滚（抖音「我」页那种折叠头）。
 /// [isMe] = true 是「我的」tab（右上角设置、无返回键），false 是「TA 的主页」。
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.user, this.isMe = false});
@@ -30,8 +30,8 @@ class _ProfilePageState extends State<ProfilePage> {
   int _tab = 0;
   bool _followed = false;
 
-  List<Post> get _posts {
-    switch (_tab) {
+  List<Post> _postsOf(int tab) {
+    switch (tab) {
       case 0:
         return Mock.ofType(PostType.note);
       case 1:
@@ -41,51 +41,103 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  /// 三个 tab 装在 PageView 里：点胶囊或左右滑都能切，每个 tab 各自记自己的滚动位置
+  final _pager = PageController();
+
+  @override
+  void dispose() {
+    _pager.dispose();
+    super.dispose();
+  }
+
+  void _goTo(int i) {
+    _pager.animateToPage(i, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
+  }
+
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
-    final body = CustomScrollView(
-      slivers: [
-        SliverPersistentHeader(
-          pinned: true,
-          delegate: _ProfileHeader(
-            user: widget.user,
-            isMe: widget.isMe,
-            followed: _followed,
-            topPadding: top,
-            onFollow: () => setState(() => _followed = !_followed),
-            onBack: () => Navigator.pop(context),
-            onSettings: () => push(context, const SettingsPage()),
-            onSearch: () => push(context, const SearchPage()),
-          ),
-        ),
-        SliverPersistentHeader(
-          pinned: true,
-          delegate: _TabsHeader(tabs: _tabs, selected: _tab, onTap: (i) => setState(() => _tab = i)),
-        ),
-        SliverToBoxAdapter(
-          child: ColoredBox(
-            color: Colors.white,
-            child: Padding(
-              padding: EdgeInsets.only(top: 4, bottom: widget.isMe ? ChickTabBar.height + 40 : 24),
-              child: _posts.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 48),
-                      child: Column(
-                        children: [
-                          ChickMascot(size: 100),
-                          SizedBox(height: 12),
-                          Text('还没有内容，去发一条吧', style: AppText.caption),
-                        ],
-                      ),
-                    )
-                  : Waterfall(_posts, heroScope: 'profile-${widget.user.id}'),
-            ),
-          ),
+    final header = _ProfileHeader(
+      user: widget.user,
+      isMe: widget.isMe,
+      followed: _followed,
+      topPadding: top,
+      onFollow: () => setState(() => _followed = !_followed),
+      onBack: () => Navigator.pop(context),
+      onSettings: () => push(context, const SettingsPage()),
+      onSearch: () => push(context, const SearchPage()),
+    );
+    // 黄色大头部放外层：手指在哪个 tab 的列表上滑，都先把大头部折叠掉再滚列表。
+    // SliverOverlapAbsorber 把头部吸顶那一截（minExtent）从布局里扣掉，body 顶部再补回同样的高度，
+    // 这样 tab 行始终贴在头部下面，折叠到底时正好卡在紧凑栏底下。
+    final body = NestedScrollView(
+      headerSliverBuilder: (context, _) => [
+        SliverOverlapAbsorber(
+          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+          sliver: SliverPersistentHeader(pinned: true, delegate: header),
         ),
       ],
+      body: Padding(
+        padding: EdgeInsets.only(top: header.minExtent),
+        child: Column(
+          children: [
+            _TabsRow(tabs: _tabs, selected: _tab, onTap: _goTo),
+            Expanded(
+              child: PageView(
+                controller: _pager,
+                onPageChanged: (i) => setState(() => _tab = i),
+                children: [
+                  for (var i = 0; i < _tabs.length; i++)
+                    _TabContent(
+                      posts: _postsOf(i),
+                      heroScope: 'profile-${widget.user.id}-$i',
+                      bottomPadding: widget.isMe ? ChickTabBar.height + 40 : 24,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
     return widget.isMe ? body : Scaffold(backgroundColor: Colors.white, body: body);
+  }
+}
+
+/// 一个 tab 的内容：瀑布流（空了就放小啾 + 提示）。
+/// 用 primary 滚动控制器接进 NestedScrollView，往上滑先折叠头部再滚自己。
+class _TabContent extends StatelessWidget {
+  const _TabContent({required this.posts, required this.heroScope, required this.bottomPadding});
+
+  final List<Post> posts;
+  final String heroScope;
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.white,
+      child: ListView(
+        primary: true,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(top: 4, bottom: bottomPadding),
+        children: [
+          if (posts.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Column(
+                children: [
+                  ChickMascot(size: 100),
+                  SizedBox(height: 12),
+                  Text('还没有内容，去发一条吧', style: AppText.caption),
+                ],
+              ),
+            )
+          else
+            Waterfall(posts, heroScope: heroScope),
+        ],
+      ),
+    );
   }
 }
 
@@ -278,49 +330,36 @@ class _ProfileHeader extends SliverPersistentHeaderDelegate {
       old.user != user || old.followed != followed || old.topPadding != topPadding || old.isMe != isMe;
 }
 
-/// 吸顶的胶囊 tab 行：黄底上压一块白色圆角卡的顶部，吸住后就是紧凑栏下面的那条
-class _TabsHeader extends SliverPersistentHeaderDelegate {
-  const _TabsHeader({required this.tabs, required this.selected, required this.onTap});
+/// 贴在头部下面的胶囊 tab 行：黄底上压一块白色圆角卡的顶部，头部折叠到底后就是紧凑栏下面的那条
+class _TabsRow extends StatelessWidget {
+  const _TabsRow({required this.tabs, required this.selected, required this.onTap});
 
   final List<String> tabs;
   final int selected;
   final ValueChanged<int> onTap;
 
-  static const _height = 68.0;
-
   @override
-  double get maxExtent => _height;
-
-  @override
-  double get minExtent => _height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // 子组件必须正好撑满声明的高度，否则 sliver 会报 layoutExtent 超过 paintExtent
-    return SizedBox.expand(
-      child: ColoredBox(
-        color: AppColors.primary,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-          child: Row(
-            children: [
-              for (var i = 0; i < tabs.length; i++) ...[
-                _TabChip(tabs[i], selected: selected == i, onTap: () => onTap(i)),
-                const SizedBox(width: 10),
-              ],
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.primary,
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+        child: Row(
+          children: [
+            for (var i = 0; i < tabs.length; i++) ...[
+              _TabChip(tabs[i], selected: selected == i, onTap: () => onTap(i)),
+              const SizedBox(width: 10),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
-
-  @override
-  bool shouldRebuild(_TabsHeader old) => old.selected != selected || old.tabs != tabs;
 }
 
 class _Stat extends StatelessWidget {
