@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -7,9 +6,9 @@ import '../app/theme.dart';
 import 'chick_face.dart';
 import 'common.dart';
 
-/// 底部导航：悬浮的毛玻璃胶囊（iOS 26 风格）+ 中间凸起的黄色「+」（设计稿动效 1），
-/// 选中态是一片透明毛玻璃药丸，换 tab 时滑过去（[_SlidingPill]）。
-/// 四个 tab 图标都是手绘矢量（[_GlyphPainter] / [ChickFace]），带「表情」：
+/// 底部导航：悬浮的毛玻璃胶囊（iOS 26 风格）+ 中间凸起的黄色「+」（设计稿动效 1）。
+/// 四个 tab 都是「图标 + 文字」，选中态不加背景，靠图标自己的高亮和文字变黑加粗表达。
+/// 图标是手绘矢量（[_GlyphPainter] / [ChickFace]），带「表情」：
 /// 选中时用弹性曲线把表情进度 t 从 0 推到 1——房子的门弯成笑嘴、发现的瞳孔转正变实、
 /// 消息气泡嘴角上扬、小鸡脸填黄泛腮红，同时整个图标弹一下。
 /// - 已在首页再点首页：图标换成旋转的刷新箭头（[refreshing]）
@@ -39,10 +38,6 @@ class ChickTabBar extends StatelessWidget {
 
   /// 胶囊离屏幕左右 / 底部的距离
   static const _margin = 16.0;
-
-  /// 选中态那颗滑动的药丸
-  static const _pillWidth = 56.0;
-  static const _pillHeight = 52.0;
 
   @override
   Widget build(BuildContext context) {
@@ -78,32 +73,19 @@ class ChickTabBar extends StatelessWidget {
                       borderRadius: radius,
                       border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
                     ),
-                    child: LayoutBuilder(
-                      builder: (_, c) => Stack(
-                        children: [
-                          // 5 个等宽槽：4 个 tab + 中间给「+」留的空位，药丸滑到选中那个槽的中心
-                          _SlidingPill(slot: c.maxWidth / 5, slotIndex: index < 2 ? index : index + 1),
-                          Positioned.fill(
-                            child: Row(
-                              children: [
-                                _item(0, '首页', (t) => _homeGlyph(t)),
-                                _item(1, '发现', (t) => _GlyphIcon(_Glyph.discover, t)),
-                                const Expanded(child: SizedBox()),
-                                _item(
-                                  2,
-                                  '消息',
-                                  (t) => RedDot(
-                                    show: messageDot,
-                                    offset: const Offset(-2, 0),
-                                    child: _GlyphIcon(_Glyph.message, t),
-                                  ),
-                                ),
-                                _item(3, '我的', (t) => ChickFace(size: 30, progress: t)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                    // 5 个等宽槽：4 个 tab + 中间给「+」留的空位
+                    child: Row(
+                      children: [
+                        _item(0, '首页', (t) => _homeGlyph(t)),
+                        _item(1, '发现', (t) => _GlyphIcon(_Glyph.discover, t)),
+                        const Expanded(child: SizedBox()),
+                        _item(
+                          2,
+                          '消息',
+                          (t) => RedDot(show: messageDot, offset: const Offset(-2, 0), child: _GlyphIcon(_Glyph.message, t)),
+                        ),
+                        _item(3, '我的', (t) => ChickFace(size: 30, progress: t)),
+                      ],
                     ),
                   ),
                 ),
@@ -145,8 +127,7 @@ class ChickTabBar extends StatelessWidget {
     );
   }
 
-  /// 一个 tab：图标 + 只在选中时展开出来的文字（iOS 26 那种选中项带标签），
-  /// 文字从图标底下抽屉式拉开并淡入，Column 居中所以图标会顺势往上让一点位置
+  /// 一个 tab：图标 + 文字。文字常显，选中时变黑加粗，没选中是灰色
   Widget _item(int i, String label, Widget Function(double t) builder) {
     final selected = i == index;
     return Expanded(
@@ -157,91 +138,19 @@ class ChickTabBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _TabIcon(selected: selected, builder: builder),
-            ClipRect(
-              child: AnimatedAlign(
-                alignment: Alignment.topCenter,
-                heightFactor: selected ? 1 : 0,
-                duration: const Duration(milliseconds: 280),
-                curve: Curves.easeOut,
-                child: AnimatedOpacity(
-                  opacity: selected ? 1 : 0,
-                  duration: const Duration(milliseconds: 220),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                        height: 1.2,
-                      ),
-                    ),
-                  ),
-                ),
+            const SizedBox(height: 2),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppColors.textPrimary : AppColors.textSecondary,
+                height: 1.2,
               ),
+              child: Text(label),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// 选中态药丸：一片透明的毛玻璃（再模糊一层、几乎不填色、白色亮边 + 外侧软阴影），
-/// 换 tab 时滑到新位置（带一点回弹），滑行途中横向拉长再缩回，模仿 iOS 26 液态玻璃那种「被拽着走」的感觉。
-class _SlidingPill extends StatelessWidget {
-  const _SlidingPill({required this.slot, required this.slotIndex});
-
-  /// 一个槽的宽度 / 目标槽的下标
-  final double slot;
-  final int slotIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(end: slotIndex.toDouble()),
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeOutBack,
-      builder: (_, s, _) => TweenAnimationBuilder<double>(
-        // key 跟着目标走：每次换 tab 都从 0 重新跑一遍拉长 → 缩回
-        key: ValueKey(slotIndex),
-        tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 420),
-        builder: (_, t, _) {
-          final stretch = 18 * math.sin(t * math.pi);
-          final w = ChickTabBar._pillWidth + stretch;
-          final r = BorderRadius.circular(ChickTabBar._pillHeight / 2);
-          return Positioned(
-            left: slot * s + (slot - w) / 2,
-            top: (ChickTabBar.height - ChickTabBar._pillHeight) / 2,
-            width: w,
-            height: ChickTabBar._pillHeight,
-            child: DecoratedBox(
-              // 阴影只画外侧，把玻璃片从胶囊上托起来
-              decoration: BoxDecoration(
-                borderRadius: r,
-                boxShadow: const [
-                  BoxShadow(color: Color(0x24000000), blurRadius: 10, offset: Offset(0, 3), blurStyle: BlurStyle.outer),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: r,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: r,
-                      // 几乎全透明，只压一点点暗把它和胶囊分开：底下模糊的内容透上来，就是玻璃片的感觉
-                      color: Colors.black.withValues(alpha: 0.06),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }
