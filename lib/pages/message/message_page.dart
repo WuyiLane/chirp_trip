@@ -132,7 +132,7 @@ class _MessagePageState extends State<MessagePage> {
   }
 
   Widget _body() {
-    final pad = EdgeInsets.only(bottom: ChickTabBar.height + 40);
+    final pad = EdgeInsets.only(bottom: ChickTabBar.space(context));
     switch (_tab) {
       case 0:
         return ListView(padding: pad, children: [for (final (i, n) in Mock.notices.indexed) _row(i, _NoticeRow(n))]);

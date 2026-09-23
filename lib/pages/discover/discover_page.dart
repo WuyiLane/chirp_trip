@@ -154,7 +154,7 @@ class _DiscoverBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: EdgeInsets.only(top: topPadding, bottom: ChickTabBar.height + 40),
+      padding: EdgeInsets.only(top: topPadding, bottom: ChickTabBar.space(context)),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),

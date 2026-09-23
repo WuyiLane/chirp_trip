@@ -161,7 +161,7 @@ class _HomePageState extends State<HomePage> {
                   ? _RecommendRow(_feed[i], heroTag: 'home-$i-${_feed[i].id}')
                   : _LoadMoreFooter(loading: _loadingMore, noMore: _noMore),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: ChickTabBar.height + 40)),
+            SliverToBoxAdapter(child: SizedBox(height: ChickTabBar.space(context))),
           ],
         ),
       ),

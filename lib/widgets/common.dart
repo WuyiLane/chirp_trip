@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
@@ -269,3 +271,67 @@ Widget textHero(String tag, String text, TextStyle style) {
 
 /// 发现页分类标签 ↔ 列表页标题共用的 Hero tag
 String categoryHeroTag(String label) => 'cat-$label';
+
+/// 毛玻璃顶栏 + 从它底下滚过去的内容（和首页、发现页一个语言）。
+/// 用它代替 AppBar 的场景：iOS 上原生导航栏是半透明的，安全区怎么补都容易差一截，
+/// 自己画一条高度就完全可控了。[child] 自己负责顶部留出 `padding.top + barHeight`。
+class FrostedBar extends StatelessWidget {
+  const FrostedBar({super.key, required this.title, required this.child, this.onBack, this.actions});
+
+  final String title;
+  final Widget child;
+  final VoidCallback? onBack;
+  final List<Widget>? actions;
+
+  /// 状态栏下面那条的高度（不含状态栏）
+  static const barHeight = 48.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: Container(
+                height: top + barHeight,
+                color: Colors.white.withValues(alpha: 0.78),
+                padding: EdgeInsets.only(top: top),
+                child: Row(
+                  children: [
+                    if (onBack != null)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onBack,
+                        child: const SizedBox(
+                          width: 44,
+                          height: barHeight,
+                          child: Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textPrimary),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                      ),
+                    ),
+                    ...?actions,
+                    const SizedBox(width: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

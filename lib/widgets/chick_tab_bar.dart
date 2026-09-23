@@ -39,6 +39,10 @@ class ChickTabBar extends StatelessWidget {
   /// 胶囊离屏幕左右 / 底部的距离
   static const _margin = 16.0;
 
+  /// 列表底部要给底栏留的空：胶囊高 + 离底边的距离 + home 条 + 一点余量。
+  /// 各个 tab 页的列表都用它，不然最后一条会被悬浮胶囊压住。
+  static double space(BuildContext context) => height + _margin + MediaQuery.paddingOf(context).bottom + 16;
+
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom + _margin;

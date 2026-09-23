@@ -2,6 +2,7 @@ import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import '../../widgets/common.dart';
 import '../onboarding/onboarding_page.dart';
 
 /// 设置页：整页用 adaptive_platform_ui 的表单组件（FormSection / ListTile / Switch / AlertDialog）。
@@ -54,15 +55,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // iOS 的导航栏是半透明的，内容会铺到它下面（CupertinoPageScaffold 把栏高算进了 padding.top），
-    // 这里把它加进列表内边距，第一项就不会被挡住；Android 上 Scaffold 已经扣掉了，这个值是 0。
+    // 不用 AdaptiveAppBar：它在 iOS 上是半透明的原生导航栏，内边距怎么补都容易差一截。
+    // 改成自己画一条毛玻璃顶栏（和首页、发现页一个语言），列表从它底下滚过去，高度完全可控。
     final inset = MediaQuery.paddingOf(context);
-    return AdaptiveScaffold(
-      appBar: const AdaptiveAppBar(title: '设置', useNativeToolbar: false),
-      body: ColoredBox(
-        color: AppColors.pageBg,
+    return Scaffold(
+      backgroundColor: AppColors.pageBg,
+      body: FrostedBar(
+        title: '设置',
+        onBack: () => Navigator.pop(context),
         child: ListView(
-          padding: EdgeInsets.fromLTRB(16, inset.top + 16, 16, inset.bottom + 16),
+          padding: EdgeInsets.fromLTRB(16, inset.top + FrostedBar.barHeight + 16, 16, inset.bottom + 16),
           children: [
             AdaptiveFormSection.insetGrouped(
               header: const Text('账号'),

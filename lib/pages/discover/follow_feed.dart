@@ -82,7 +82,7 @@ class _FollowFeedState extends State<FollowFeed> {
           sliver: SliverToBoxAdapter(child: PillBanner(text: _banner)),
         ),
         SliverPadding(
-          padding: EdgeInsets.only(top: 4, bottom: ChickTabBar.height + 40),
+          padding: EdgeInsets.only(top: 4, bottom: ChickTabBar.space(context)),
           sliver: SliverAnimatedList(
             key: _listKey,
             initialItemCount: _posts.length,

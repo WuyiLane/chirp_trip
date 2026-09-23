@@ -29,7 +29,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
   static const _expanded = 340.0;
 
   final _scroll = ScrollController();
-  final _pager = PageController();
 
   /// 0 = 完全展开（看得到大图），1 = 完全折叠（只剩工具栏）
   final _collapse = ValueNotifier<double>(0);
@@ -54,7 +53,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
   void dispose() {
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
-    _pager.dispose();
     _collapse.dispose();
     super.dispose();
   }
@@ -66,9 +64,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
         images: widget.post.images,
         initialIndex: i,
         heroTag: widget.heroTag,
-        onIndexChanged: (j) {
-          if (_pager.hasClients) _pager.jumpToPage(j);
-        },
+        // 看图页翻页 → 头图跟着换，关闭时 Hero 飞回的就是当前这张
+        onIndexChanged: (j) => setState(() => _imageIndex = j),
       ),
     );
   }
@@ -123,7 +120,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
               background: _hero(
                 _ImagePager(
                   images: post.images,
-                  controller: _pager,
                   index: _imageIndex,
                   onChanged: (i) => setState(() => _imageIndex = i),
                   onTap: _openViewer,
@@ -242,33 +238,51 @@ class _PostDetailPageState extends State<PostDetailPage> {
   }
 }
 
-/// 图片轮播 + 右下角「1/9」
-class _ImagePager extends StatelessWidget {
-  const _ImagePager({
-    required this.images,
-    required this.controller,
-    required this.index,
-    required this.onChanged,
-    required this.onTap,
-  });
-
-  final PageController controller;
-  final ValueChanged<int> onTap;
+/// 图片轮播 + 右下角「1/9」。
+/// 控制器放在自己身上、用 [index] 当 initialPage：从全屏看图返回时 Hero 会把头图整棵子树重建一次，
+/// 控制器若放在外面，新建的 PageView 会退回第 0 页——计数是对的、图却回到第一张。
+class _ImagePager extends StatefulWidget {
+  const _ImagePager({required this.images, required this.index, required this.onChanged, required this.onTap});
 
   final List<String> images;
   final int index;
   final ValueChanged<int> onChanged;
+  final ValueChanged<int> onTap;
+
+  @override
+  State<_ImagePager> createState() => _ImagePagerState();
+}
+
+class _ImagePagerState extends State<_ImagePager> {
+  late final _controller = PageController(initialPage: widget.index);
+
+  @override
+  void didUpdateWidget(_ImagePager old) {
+    super.didUpdateWidget(old);
+    // 外面把页码改了（全屏看图里翻了页）就跟过去
+    if (widget.index != old.index && _controller.hasClients && _controller.page?.round() != widget.index) {
+      _controller.jumpToPage(widget.index);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final images = widget.images;
+    final index = widget.index;
     return Stack(
       fit: StackFit.expand,
       children: [
         PageView.builder(
-          controller: controller,
+          controller: _controller,
           itemCount: images.length,
-          onPageChanged: onChanged,
-          itemBuilder: (_, i) => GestureDetector(onTap: () => onTap(i), child: NetImage(images[i])),
+          onPageChanged: widget.onChanged,
+          itemBuilder: (_, i) => GestureDetector(onTap: () => widget.onTap(i), child: NetImage(images[i])),
         ),
         Positioned(
           right: 16,

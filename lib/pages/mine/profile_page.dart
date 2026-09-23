@@ -93,7 +93,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     _TabContent(
                       posts: _postsOf(i),
                       heroScope: 'profile-${widget.user.id}-$i',
-                      bottomPadding: widget.isMe ? ChickTabBar.height + 40 : 24,
+                      bottomPadding: widget.isMe ? ChickTabBar.space(context) : 24,
                     ),
                 ],
               ),

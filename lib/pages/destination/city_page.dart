@@ -7,6 +7,7 @@ import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../../widgets/common.dart';
 import '../../widgets/net_image.dart';
+import '../search/search_page.dart';
 import 'spot_page.dart';
 
 /// 城市页（设计稿动效 5 第二段）：景点卡片横向轮播。
@@ -60,7 +61,11 @@ class _CityPageState extends State<CityPage> {
                   onTap: () => Navigator.pop(context),
                 ),
                 const Spacer(),
-                RoundIconButton(icon: Icons.search, background: Colors.transparent, onTap: () {}),
+                RoundIconButton(
+                  icon: Icons.search,
+                  background: Colors.transparent,
+                  onTap: () => push(context, const SearchPage()),
+                ),
               ],
             ),
           ),

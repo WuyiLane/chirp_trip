@@ -6,6 +6,7 @@ import '../../data/models.dart';
 import '../../widgets/common.dart';
 import '../../widgets/entrance.dart';
 import '../../widgets/net_image.dart';
+import '../search/search_page.dart';
 import 'city_page.dart';
 
 /// 目的地页（设计稿动效 5 第一段）：标题 + 两列城市卡片。
@@ -55,7 +56,11 @@ class _DestinationPageState extends State<DestinationPage> {
                   onTap: () => Navigator.pop(context),
                 ),
                 const Spacer(),
-                RoundIconButton(icon: Icons.search, background: Colors.transparent, onTap: () {}),
+                RoundIconButton(
+                  icon: Icons.search,
+                  background: Colors.transparent,
+                  onTap: () => push(context, const SearchPage()),
+                ),
               ],
             ),
           ),
