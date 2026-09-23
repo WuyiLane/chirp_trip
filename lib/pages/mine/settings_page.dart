@@ -16,6 +16,21 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _push = true;
   bool _wifiOnly = false;
 
+  /// 缓存大小（mock）：清完置 0
+  String _cache = '23.5 MB';
+
+  Future<void> _clearCache() async {
+    if (_cache == '0 MB') {
+      AdaptiveSnackBar.show(context, message: '已经很干净啦', type: AdaptiveSnackBarType.info);
+      return;
+    }
+    setState(() => _cache = '清理中…');
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    setState(() => _cache = '0 MB');
+    AdaptiveSnackBar.show(context, message: '已清除 23.5 MB 缓存', type: AdaptiveSnackBarType.success);
+  }
+
   void _logout() {
     AdaptiveAlertDialog.show(
       context: context,
@@ -39,12 +54,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // iOS 的导航栏是半透明的，内容会铺到它下面（CupertinoPageScaffold 把栏高算进了 padding.top），
+    // 这里把它加进列表内边距，第一项就不会被挡住；Android 上 Scaffold 已经扣掉了，这个值是 0。
+    final inset = MediaQuery.paddingOf(context);
     return AdaptiveScaffold(
       appBar: const AdaptiveAppBar(title: '设置', useNativeToolbar: false),
       body: ColoredBox(
         color: AppColors.pageBg,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, inset.top + 16, 16, inset.bottom + 16),
           children: [
             AdaptiveFormSection.insetGrouped(
               header: const Text('账号'),
@@ -88,8 +106,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 AdaptiveListTile(
                   leading: const Icon(Icons.cleaning_services_outlined),
                   title: const Text('清除缓存'),
-                  subtitle: const Text('23.5 MB'),
-                  onTap: () => AdaptiveSnackBar.show(context, message: '缓存已清除', type: AdaptiveSnackBarType.success),
+                  subtitle: Text(_cache),
+                  onTap: _clearCache,
                 ),
               ],
             ),

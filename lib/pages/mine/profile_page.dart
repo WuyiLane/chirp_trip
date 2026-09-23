@@ -86,6 +86,8 @@ class _ProfilePageState extends State<ProfilePage> {
               child: PageView(
                 controller: _pager,
                 onPageChanged: (i) => setState(() => _tab = i),
+                // 到头了就别再拉出空白（iOS 默认是回弹的）
+                physics: const ClampingScrollPhysics(),
                 children: [
                   for (var i = 0; i < _tabs.length; i++)
                     _TabContent(

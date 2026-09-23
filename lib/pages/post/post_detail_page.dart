@@ -5,6 +5,7 @@ import '../../app/theme.dart';
 import '../../data/mock.dart';
 import '../../data/models.dart';
 import '../../widgets/common.dart';
+import '../../widgets/drag_sheet.dart';
 import '../../widgets/like_button.dart';
 import '../../widgets/net_image.dart';
 import '../../widgets/post_card.dart';
@@ -168,7 +169,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   for (final c in Mock.comments) _CommentRow(c),
                   Center(
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () => _openComments(post),
                       child: Text(
                         '查看所有${post.comments}条评论  ›',
                         style: const TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
@@ -199,6 +200,23 @@ class _PostDetailPageState extends State<PostDetailPage> {
   }
 
   void _toggleFollow() => setState(() => _followed = !_followed);
+
+  /// 全部评论：微博那种浮动面板，往下拖能关、往上拖吸到全屏
+  void _openComments(Post post) {
+    // 评论数比 mock 多，循环凑够条数，纯粹为了让面板能滚起来
+    final all = [for (var i = 0; i < post.comments; i++) Mock.comments[i % Mock.comments.length]];
+    showDragSheet(
+      context,
+      title: '${post.comments} 条评论',
+      builder: (_, controller) => ListView.separated(
+        controller: controller,
+        padding: EdgeInsets.fromLTRB(16, 4, 16, MediaQuery.paddingOf(context).bottom + 16),
+        itemCount: all.length,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (_, i) => _CommentRow(all[i]),
+      ),
+    );
+  }
 
   /// 头图 Hero：飞行途中只画当前这一张图（不带轮播）。
   /// 从卡片飞过来时圆角从 16 收到 0；和全屏看图页之间飞（对方的 Hero 子组件是裸的 NetImage）圆角全程为 0。

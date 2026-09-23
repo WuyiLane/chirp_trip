@@ -31,6 +31,9 @@ class _LoginPageState extends State<LoginPage> {
   int _countdown = 0;
   Timer? _timer;
 
+  /// 验证码填满后转圈校验，转完再进主壳
+  bool _loading = false;
+
   @override
   void dispose() {
     _phone.dispose();
@@ -64,21 +67,59 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {});
     if (v.length == 6) {
       _codeFocus.unfocus();
-      // 最后一格弹完再跳，让人看到填满的状态
+      // 最后一格弹完再开始登录，让人看到填满的状态
       Future.delayed(const Duration(milliseconds: 450), () {
         if (mounted) _login();
       });
     }
   }
 
-  void _login() {
+  Future<void> _login() async {
+    // 压一层半透明遮罩 + 转圈，装作在校验验证码
+    setState(() => _loading = true);
+    await Future.delayed(const Duration(milliseconds: 1100));
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const MainShell()), (_) => false);
   }
 
   @override
   Widget build(BuildContext context) {
     return AdaptiveScaffold(
-      body: SafeArea(
+      body: Stack(
+        children: [
+          _form(),
+          // 校验中：挡住整页，转一只黄色的圈
+          IgnorePointer(
+            ignoring: !_loading,
+            child: AnimatedOpacity(
+              opacity: _loading ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: ColoredBox(
+                color: Colors.white.withValues(alpha: 0.82),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
+                      ),
+                      SizedBox(height: 14),
+                      Text('正在登录…', style: AppText.caption),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _form() {
+    return SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(
@@ -146,7 +187,6 @@ class _LoginPageState extends State<LoginPage> {
             ],
           ),
         ),
-      ),
     );
   }
 

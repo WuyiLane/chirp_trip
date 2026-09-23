@@ -135,34 +135,34 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
     return NotificationListener<ScrollNotification>(
       onNotification: _onScroll,
       // 去掉 Android 自带的拉伸 / 光晕，只留我们自己的弧线
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
-        // 状态栏那一条留白（白底），内容不再滚到时间 / 电量底下；「今日推荐」吸顶时也停在它下面
-        child: SafeArea(
-          bottom: false,
-          child: CustomScrollView(
-            controller: _scroll,
-            physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.only(top: 12),
-                sliver: SliverList.list(children: _head()),
-              ),
-              // 「今日推荐」吸顶，下面的卡片从它底下滚过去
-              SliverPersistentHeader(pinned: true, delegate: _StickyHeader(SectionHeader('今日推荐', trailing: _more()))),
-              SliverList.builder(
-                itemCount: _feed.length + 1,
-                itemBuilder: (_, i) => i < _feed.length
-                    // tag 带上下标：数据源里同一条帖子不会因为翻页出现两个相同的 Hero
-                    ? _RecommendRow(_feed[i], heroTag: 'home-$i-${_feed[i].id}')
-                    : _LoadMoreFooter(loading: _loadingMore, noMore: _noMore),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: ChickTabBar.height + 40)),
-            ],
-          ),
+        // 内容一路铺到状态栏底下，顶上是两条连着的毛玻璃：状态栏那条一直在，
+        // 「今日推荐」滚上来后吸在它下面（相邻的 pinned sliver 会自动叠在一起），
+        // 合起来就是发现页那种一整条磨砂导航。
+        child: CustomScrollView(
+          controller: _scroll,
+          physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
+          slivers: [
+            SliverPersistentHeader(pinned: true, delegate: _FrostedBand(top)),
+            SliverPadding(
+              padding: const EdgeInsets.only(top: 12),
+              sliver: SliverList.list(children: _head()),
+            ),
+            SliverPersistentHeader(pinned: true, delegate: _StickyHeader(SectionHeader('今日推荐', trailing: _more()))),
+            SliverList.builder(
+              itemCount: _feed.length + 1,
+              itemBuilder: (_, i) => i < _feed.length
+                  // tag 带上下标：数据源里同一条帖子不会因为翻页出现两个相同的 Hero
+                  ? _RecommendRow(_feed[i], heroTag: 'home-$i-${_feed[i].id}')
+                  : _LoadMoreFooter(loading: _loadingMore, noMore: _noMore),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: ChickTabBar.height + 40)),
+          ],
         ),
       ),
     );
@@ -340,6 +340,35 @@ class _SpinningArcState extends State<_SpinningArc> with SingleTickerProviderSta
   }
 }
 
+/// 轮播里的一张：当前那张是满的，往两边越远缩得越小、露出的那截也就矮一点
+class _PagerScale extends StatelessWidget {
+  const _PagerScale({required this.controller, required this.index, required this.initialPage, required this.child});
+
+  final PageController controller;
+  final int index;
+  final int initialPage;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (_, c) {
+        // 还没布局完时 page 是 null，先按当前页算
+        final page = controller.hasClients && controller.position.haveDimensions
+            ? controller.page ?? initialPage.toDouble()
+            : initialPage.toDouble();
+        final d = (page - index).abs().clamp(0.0, 1.0);
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 10 * d),
+          child: Opacity(opacity: 1 - 0.25 * d, child: c),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
 /// 话题轮播：黄色卡片 + 右侧封面图；封面 Hero 飞到话题页头图
 class _TopicBanner extends StatefulWidget {
   const _TopicBanner(this.topics);
@@ -351,7 +380,8 @@ class _TopicBanner extends StatefulWidget {
 }
 
 class _TopicBannerState extends State<_TopicBanner> {
-  final _controller = PageController(viewportFraction: 0.92);
+  // 留窄一点，左右两张邻卡都能探出来一截
+  final _controller = PageController(viewportFraction: 0.84);
   int _page = 0;
 
   @override
@@ -365,7 +395,8 @@ class _TopicBannerState extends State<_TopicBanner> {
     return Column(
       children: [
         SizedBox(
-          height: 150,
+          // 比卡片高一点：两边缩小的邻卡上下各留了 10
+          height: 170,
           child: PageView.builder(
             controller: _controller,
             itemCount: widget.topics.length,
@@ -373,8 +404,10 @@ class _TopicBannerState extends State<_TopicBanner> {
             itemBuilder: (_, i) {
               final t = widget.topics[i];
               final tag = 'home-topic-${t.id}';
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
+              return _PagerScale(
+                controller: _controller,
+                index: i,
+                initialPage: _page,
                 child: PressScale(
                   onTap: () => push(context, TopicPage(t, heroTag: tag)),
                   child: Container(
@@ -440,6 +473,44 @@ class _TopicBannerState extends State<_TopicBanner> {
   }
 }
 
+/// 状态栏那条毛玻璃：一直吸在最顶上，内容从它底下滚过去
+class _FrostedBand extends SliverPersistentHeaderDelegate {
+  const _FrostedBand(this.height);
+
+  final double height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  double get minExtent => height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => const _Frosted();
+
+  @override
+  bool shouldRebuild(_FrostedBand old) => old.height != height;
+}
+
+/// 磨砂底：背景模糊 + 半透明白，和底栏、发现页头部同一套参数
+class _Frosted extends StatelessWidget {
+  const _Frosted({this.child});
+
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: SizedBox.expand(
+          child: ColoredBox(color: Colors.white.withValues(alpha: 0.78), child: child),
+        ),
+      ),
+    );
+  }
+}
+
 /// 吸顶的区块标题：固定高度的毛玻璃条，卡片从它底下滚过时能透出来（和底栏一个语言）
 class _StickyHeader extends SliverPersistentHeaderDelegate {
   const _StickyHeader(this.child);
@@ -455,16 +526,7 @@ class _StickyHeader extends SliverPersistentHeaderDelegate {
   double get minExtent => _height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: SizedBox.expand(
-          child: ColoredBox(color: Colors.white.withValues(alpha: 0.78), child: child),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => _Frosted(child: child);
 
   @override
   bool shouldRebuild(_StickyHeader old) => old.child != child;

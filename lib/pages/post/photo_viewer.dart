@@ -44,6 +44,21 @@ class _PhotoViewerState extends State<PhotoViewer> {
   bool _zoomed = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _precache(_index);
+  }
+
+  /// 提前把当前和左右各一张解码进图片缓存，翻页时就不会先闪一下再出图
+  void _precache(int i) {
+    for (final j in [i, i - 1, i + 1]) {
+      if (j >= 0 && j < widget.images.length) {
+        precacheImage(NetworkImage(widget.images[j]), context);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -65,6 +80,7 @@ class _PhotoViewerState extends State<PhotoViewer> {
                 _index = i;
                 _zoomed = false;
               });
+              _precache(i);
               widget.onIndexChanged?.call(i);
             },
             itemBuilder: (_, i) => _ZoomableImage(
@@ -176,7 +192,7 @@ class _ZoomableImageState extends State<_ZoomableImage> with SingleTickerProvide
 
   @override
   Widget build(BuildContext context) {
-    final image = NetImage(widget.url, fit: BoxFit.contain);
+    final image = NetImage(widget.url, fit: BoxFit.contain, placeholderColor: Colors.transparent);
     return GestureDetector(
       onTap: widget.onTap,
       onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,

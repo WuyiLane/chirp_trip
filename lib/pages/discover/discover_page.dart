@@ -64,6 +64,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
         PageView(
           controller: _pager,
           onPageChanged: (i) => setState(() => _tab = i),
+          // 到头了就别再拉出空白（iOS 默认是回弹的）
+          physics: const ClampingScrollPhysics(),
           children: [_DiscoverBody(topPadding: header), FollowFeed(topPadding: header)],
         ),
         Positioned(

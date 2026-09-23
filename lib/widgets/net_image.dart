@@ -7,13 +7,24 @@ import '../app/theme.dart';
 /// 图片：加载中显示灰底，失败显示灰底 + 小图标，不抛错。
 /// [url] 是 http 地址就走网络；否则当成本地文件路径（发布流程里从相册 / 相机拿到的图）。
 class NetImage extends StatelessWidget {
-  const NetImage(this.url, {super.key, this.width, this.height, this.fit = BoxFit.cover, this.radius = 0});
+  const NetImage(
+    this.url, {
+    super.key,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.radius = 0,
+    this.placeholderColor = AppColors.imagePlaceholder,
+  });
 
   final String url;
   final double? width;
   final double? height;
   final BoxFit fit;
   final double radius;
+
+  /// 加载中的底色：黑底看图页传透明，免得闪一块灰
+  final Color placeholderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +65,7 @@ class NetImage extends StatelessWidget {
   Widget _placeholder({Widget? child}) => Container(
     width: width,
     height: height,
-    color: AppColors.imagePlaceholder,
+    color: placeholderColor,
     alignment: Alignment.center,
     child: child,
   );
