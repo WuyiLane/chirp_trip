@@ -75,9 +75,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
-    // 压一层半透明遮罩 + 转圈，装作在校验验证码
+    // 验证码那行换成小转圈，装作在校验
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 1100));
+    await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const MainShell()), (_) => false);
   }
@@ -85,41 +85,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return AdaptiveScaffold(
-      body: Stack(
-        children: [
-          _form(),
-          // 校验中：挡住整页，转一只黄色的圈
-          IgnorePointer(
-            ignoring: !_loading,
-            child: AnimatedOpacity(
-              opacity: _loading ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: ColoredBox(
-                color: Colors.white.withValues(alpha: 0.82),
-                child: const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 34,
-                        height: 34,
-                        child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
-                      ),
-                      SizedBox(height: 14),
-                      Text('正在登录…', style: AppText.caption),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _form() {
-    return SafeArea(
+      body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(
@@ -187,6 +153,7 @@ class _LoginPageState extends State<LoginPage> {
             ],
           ),
         ),
+      ),
     );
   }
 
@@ -209,7 +176,7 @@ class _LoginPageState extends State<LoginPage> {
             fillColor: AppColors.inputBg,
             counterText: '',
             contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
           ),
         ),
         const Padding(
@@ -227,7 +194,7 @@ class _LoginPageState extends State<LoginPage> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _phoneOk ? AppColors.primary : AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(26),
+              borderRadius: BorderRadius.circular(8),
               boxShadow: _phoneOk ? AppShadow.primary : const [],
             ),
             child: AnimatedDefaultTextStyle(
@@ -297,9 +264,19 @@ class _LoginPageState extends State<LoginPage> {
         const SizedBox(height: 20),
         _CodeBoxes(code: _code.text, focus: _codeFocus, controller: _code, onChanged: _onCode),
         const SizedBox(height: 16),
-        Text(
-          _countdown > 0 ? '重新发送（$_countdown秒）' : '重新发送',
-          style: TextStyle(fontSize: 12, color: _countdown > 0 ? AppColors.textHint : AppColors.textPrimary),
+        // 填满后这一行换成一只小黄圈，转完就进主壳
+        SizedBox(
+          height: 18,
+          child: _loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.primary),
+                )
+              : Text(
+                  _countdown > 0 ? '重新发送（$_countdown秒）' : '重新发送',
+                  style: TextStyle(fontSize: 12, color: _countdown > 0 ? AppColors.textHint : AppColors.textPrimary),
+                ),
         ),
       ],
     );
@@ -376,7 +353,7 @@ class _CodeBox extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: filled ? AppColors.primaryLight : AppColors.inputBg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: active || filled ? AppColors.primary : Colors.transparent, width: 2),
       ),
       child: AnimatedSwitcher(
