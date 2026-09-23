@@ -301,30 +301,35 @@ class FrostedBar extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
               child: Container(
                 height: top + barHeight,
-                color: Colors.white.withValues(alpha: 0.78),
+                // 和页面底色一个灰调，只是半透明 + 模糊，内容滚过去时能透出来
+                color: AppColors.pageBg.withValues(alpha: 0.82),
                 padding: EdgeInsets.only(top: top),
-                child: Row(
+                // 标题居中，返回键和右侧操作各压一边
+                child: Stack(
                   children: [
-                    if (onBack != null)
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: onBack,
-                        child: const SizedBox(
-                          width: 44,
-                          height: barHeight,
-                          child: Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textPrimary),
-                        ),
-                      )
-                    else
-                      const SizedBox(width: 16),
-                    Expanded(
+                    Center(
                       child: Text(
                         title,
-                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                       ),
                     ),
-                    ...?actions,
-                    const SizedBox(width: 16),
+                    Row(
+                      children: [
+                        if (onBack != null)
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: onBack,
+                            child: const SizedBox(
+                              width: 44,
+                              height: barHeight,
+                              child: Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textPrimary),
+                            ),
+                          ),
+                        const Spacer(),
+                        ...?actions,
+                        const SizedBox(width: 16),
+                      ],
+                    ),
                   ],
                 ),
               ),
