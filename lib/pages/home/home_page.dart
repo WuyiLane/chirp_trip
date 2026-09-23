@@ -360,7 +360,8 @@ class _PagerScale extends StatelessWidget {
             : initialPage.toDouble();
         final d = (page - index).abs().clamp(0.0, 1.0);
         return Padding(
-          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 10 * d),
+          // 左 16 和别的模块对齐，右 12 是卡片之间的缝
+          padding: EdgeInsets.fromLTRB(16, 10 * d, 12, 10 * d),
           child: Opacity(opacity: 1 - 0.25 * d, child: c),
         );
       },
@@ -380,8 +381,8 @@ class _TopicBanner extends StatefulWidget {
 }
 
 class _TopicBannerState extends State<_TopicBanner> {
-  // 留窄一点，左右两张邻卡都能探出来一截
-  final _controller = PageController(viewportFraction: 0.84);
+  // 留窄一点，右边下一张能探出来一截
+  final _controller = PageController(viewportFraction: 0.88);
   int _page = 0;
 
   @override
@@ -395,10 +396,13 @@ class _TopicBannerState extends State<_TopicBanner> {
     return Column(
       children: [
         SizedBox(
-          // 比卡片高一点：两边缩小的邻卡上下各留了 10
+          // 比卡片高一点：缩小的邻卡上下各留了 10
           height: 170,
           child: PageView.builder(
             controller: _controller,
+            // 不给首尾补空档：第一张左边就贴着 16，和「热门目的地」这些标题一条线，
+            // 右边露出下一张的一截
+            padEnds: false,
             itemCount: widget.topics.length,
             onPageChanged: (i) => setState(() => _page = i),
             itemBuilder: (_, i) {
