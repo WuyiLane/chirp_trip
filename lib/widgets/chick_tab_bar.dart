@@ -184,7 +184,7 @@ class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
   late final Animation<double> _drawT = CurvedAnimation(parent: _draw, curve: Curves.easeInOut);
 
   /// 描到这个进度就开始上色（和描线最后一段重叠）
-  static const _litAt = 0.65;
+  static const _litAt = 0.8;
 
   /// 这一轮描线是否已经触发上色
   late bool _lit = widget.selected;

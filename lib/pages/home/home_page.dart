@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -439,7 +440,7 @@ class _TopicBannerState extends State<_TopicBanner> {
   }
 }
 
-/// 吸顶的区块标题：固定高度、白底，盖住从底下滚过去的卡片
+/// 吸顶的区块标题：固定高度的毛玻璃条，卡片从它底下滚过时能透出来（和底栏一个语言）
 class _StickyHeader extends SliverPersistentHeaderDelegate {
   const _StickyHeader(this.child);
 
@@ -455,8 +456,13 @@ class _StickyHeader extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return SizedBox.expand(
-      child: ColoredBox(color: Colors.white, child: child),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: SizedBox.expand(
+          child: ColoredBox(color: Colors.white.withValues(alpha: 0.78), child: child),
+        ),
+      ),
     );
   }
 
