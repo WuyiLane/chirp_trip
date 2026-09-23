@@ -160,8 +160,9 @@ class ChickTabBar extends StatelessWidget {
   }
 }
 
-/// 选中动画分两段：先「描线」——线条像被一支笔从头画出来（draw 0 → 1），
-/// 描完再走表情：t 用 easeOutBack 从 0 推到 1（会略微越过再回来），同时整体放大到 1.25 回弹；
+/// 选中动画：线条像被一支笔从头画出来（draw 0 → 1，900ms），描到 [_litAt] 时颜色开始渗进来——
+/// t 用 easeOutBack 从 0 推到 1（会略微越过再回来），同时整体放大到 1.25 回弹。
+/// 两段重叠着走，笔还在收尾时黄色已经上来了，比描完再上色自然，整体也不会拖到一秒多。
 /// 取消选中时线保持画满，t 平滑退回 0。
 class _TabIcon extends StatefulWidget {
   const _TabIcon({required this.selected, required this.builder});
@@ -177,10 +178,16 @@ class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
   /// 描线：选中时 0 → 1 慢慢描（能看清笔在走）
   late final AnimationController _draw = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 700),
+    duration: const Duration(milliseconds: 900),
     value: 1,
   );
   late final Animation<double> _drawT = CurvedAnimation(parent: _draw, curve: Curves.easeInOut);
+
+  /// 描到这个进度就开始上色（和描线最后一段重叠）
+  static const _litAt = 0.65;
+
+  /// 这一轮描线是否已经触发上色
+  late bool _lit = widget.selected;
 
   late final AnimationController _expr = AnimationController(
     vsync: this,
@@ -205,17 +212,28 @@ class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
   ]).animate(_bounceCtrl);
 
   @override
+  void initState() {
+    super.initState();
+    _draw.addListener(_onDraw);
+  }
+
+  /// 描线走到 [_litAt] 就开始上色、做表情、弹一下（中途被切走就不触发）
+  void _onDraw() {
+    if (_lit || !widget.selected || _draw.value < _litAt) return;
+    _lit = true;
+    _expr.forward();
+    _bounceCtrl.forward(from: 0);
+  }
+
+  @override
   void didUpdateWidget(_TabIcon old) {
     super.didUpdateWidget(old);
     if (widget.selected == old.selected) return;
     if (widget.selected) {
-      // 先从头描一遍线，描完再填色、做表情、弹一下（中途被切走的话 then 不会触发）
-      _draw.forward(from: 0).then((_) {
-        if (!mounted || !widget.selected) return;
-        _expr.forward();
-        _bounceCtrl.forward(from: 0);
-      });
+      _lit = false;
+      _draw.forward(from: 0);
     } else {
+      _lit = false;
       _draw.value = 1;
       _expr.reverse();
     }
