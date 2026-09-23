@@ -75,7 +75,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
-    // 验证码那行换成小转圈，装作在校验
+    // 屏幕正中转个小圈，装作在校验验证码
     setState(() => _loading = true);
     await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
@@ -85,73 +85,92 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return AdaptiveScaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
-              // 左上角小啾 + 大标题
-              Row(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                    alignment: Alignment.center,
-                    child: const ChickFace(size: 40),
-                  ),
-                  const SizedBox(width: 16),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('你好呀', style: AppText.pageTitle),
-                      Text('欢迎来到啾旅', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 40),
-              // 两步之间横向滑动切换
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 340),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, anim) => FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(
-                    position: Tween(begin: const Offset(0.25, 0), end: Offset.zero).animate(anim),
-                    child: child,
-                  ),
+      body: Stack(
+        children: [
+          _form(),
+          // 校验中：屏幕正中一只小黄圈，不压遮罩、不写字，只是把点击拦住
+          if (_loading)
+            const AbsorbPointer(
+              child: Center(
+                child: SizedBox(
+                  width: 34,
+                  height: 34,
+                  child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
                 ),
-                child: _step == 0 ? _phoneStep() : _codeStep(),
               ),
-              const SizedBox(height: 56),
-              const Row(
-                children: [
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('其他登录方式', style: AppText.caption),
-                  ),
-                  Expanded(child: Divider()),
-                ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _form() {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 40),
+            // 左上角小啾 + 大标题
+            Row(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                  alignment: Alignment.center,
+                  child: const ChickFace(size: 40),
+                ),
+                const SizedBox(width: 16),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('你好呀', style: AppText.pageTitle),
+                    Text('欢迎来到啾旅', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 40),
+            // 两步之间横向滑动切换
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 340),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: SlideTransition(
+                  position: Tween(begin: const Offset(0.25, 0), end: Offset.zero).animate(anim),
+                  child: child,
+                ),
               ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _thirdParty(Icons.wechat, const Color(0xFF07C160)),
-                  const SizedBox(width: 28),
-                  _thirdParty(Icons.alternate_email, const Color(0xFF12B7F5)),
-                  const SizedBox(width: 28),
-                  _thirdParty(Icons.apple, AppColors.textPrimary),
-                ],
-              ),
-              const SizedBox(height: 40),
-            ],
-          ),
+              child: _step == 0 ? _phoneStep() : _codeStep(),
+            ),
+            const SizedBox(height: 56),
+            const Row(
+              children: [
+                Expanded(child: Divider()),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('其他登录方式', style: AppText.caption),
+                ),
+                Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _thirdParty(Icons.wechat, const Color(0xFF07C160)),
+                const SizedBox(width: 28),
+                _thirdParty(Icons.alternate_email, const Color(0xFF12B7F5)),
+                const SizedBox(width: 28),
+                _thirdParty(Icons.apple, AppColors.textPrimary),
+              ],
+            ),
+            const SizedBox(height: 40),
+          ],
         ),
       ),
     );
@@ -264,19 +283,9 @@ class _LoginPageState extends State<LoginPage> {
         const SizedBox(height: 20),
         _CodeBoxes(code: _code.text, focus: _codeFocus, controller: _code, onChanged: _onCode),
         const SizedBox(height: 16),
-        // 填满后这一行换成一只小黄圈，转完就进主壳
-        SizedBox(
-          height: 18,
-          child: _loading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.primary),
-                )
-              : Text(
-                  _countdown > 0 ? '重新发送（$_countdown秒）' : '重新发送',
-                  style: TextStyle(fontSize: 12, color: _countdown > 0 ? AppColors.textHint : AppColors.textPrimary),
-                ),
+        Text(
+          _countdown > 0 ? '重新发送（$_countdown秒）' : '重新发送',
+          style: TextStyle(fontSize: 12, color: _countdown > 0 ? AppColors.textHint : AppColors.textPrimary),
         ),
       ],
     );
