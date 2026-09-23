@@ -25,8 +25,8 @@ workflows:
 
   android-apk:
     name: Android APK
-    # 安卓不用 macOS，Linux 机器更快
-    instance_type: linux_x2
+    # 免费套餐只给 mac_mini_m2（linux_x2 要升级到付费方案），安卓在 macOS 机器上照样能编
+    instance_type: mac_mini_m2
     max_build_duration: 30
     environment:
       flutter: stable
