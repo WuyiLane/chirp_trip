@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import 'package:flutter/material.dart';
 
@@ -63,83 +65,84 @@ class _SettingsPageState extends State<SettingsPage> {
       body: FrostedBar(
         title: '设置',
         onBack: () => Navigator.pop(context),
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(16, inset.top + FrostedBar.barHeight + 16, 16, inset.bottom + 16),
+        child: Stack(
           children: [
-            AdaptiveFormSection.insetGrouped(
-              header: const Text('账号'),
+            ListView(
+              // 底部留出悬浮的退出条
+              padding: EdgeInsets.fromLTRB(12, inset.top + FrostedBar.barHeight + 12, 12, inset.bottom + 88),
               children: [
-                AdaptiveListTile(
-                  leading: const Icon(Icons.person_outline),
-                  title: const Text('个人资料'),
-                  trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
-                  onTap: () {},
+                AdaptiveFormSection.insetGrouped(
+                  header: const Text('通用'),
+                  children: [
+                    AdaptiveListTile(
+                      leading: const Icon(Icons.notifications_none),
+                      title: const Text('推送通知'),
+                      trailing: AdaptiveSwitch(
+                        value: _push,
+                        activeColor: AppColors.primary,
+                        onChanged: (v) => setState(() => _push = v),
+                      ),
+                    ),
+                    AdaptiveListTile(
+                      leading: const Icon(Icons.wifi),
+                      title: const Text('仅 Wi-Fi 下加载图片'),
+                      trailing: AdaptiveSwitch(
+                        value: _wifiOnly,
+                        activeColor: AppColors.primary,
+                        onChanged: (v) => setState(() => _wifiOnly = v),
+                      ),
+                    ),
+                    AdaptiveListTile(
+                      leading: const Icon(Icons.cleaning_services_outlined),
+                      title: const Text('清除缓存'),
+                      subtitle: Text(_cache),
+                      onTap: _clearCache,
+                    ),
+                  ],
                 ),
-                AdaptiveListTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: const Text('账号与安全'),
-                  trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
-                  onTap: () {},
+                const SizedBox(height: 20),
+                AdaptiveFormSection.insetGrouped(
+                  header: const Text('关于'),
+                  children: [
+                    const AdaptiveListTile(
+                      leading: Icon(Icons.info_outline),
+                      title: Text('版本'),
+                      trailing: Text('1.0.0', style: TextStyle(color: AppColors.textSecondary)),
+                    ),
+                    AdaptiveListTile(
+                      leading: const Icon(Icons.description_outlined),
+                      title: const Text('用户协议与隐私政策'),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+                      onTap: () {},
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            AdaptiveFormSection.insetGrouped(
-              header: const Text('通用'),
-              children: [
-                AdaptiveListTile(
-                  leading: const Icon(Icons.notifications_none),
-                  title: const Text('推送通知'),
-                  trailing: AdaptiveSwitch(
-                    value: _push,
-                    activeColor: AppColors.primary,
-                    onChanged: (v) => setState(() => _push = v),
+            // 退出登录固定在底部：和首页底栏一样的悬浮毛玻璃条，列表从它底下滚过去
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                  child: Container(
+                    color: Colors.white.withValues(alpha: 0.78),
+                    padding: EdgeInsets.fromLTRB(12, 10, 12, inset.bottom + 10),
+                    child: SizedBox(
+                      height: 48,
+                      child: AdaptiveButton(
+                        label: '退出登录',
+                        style: AdaptiveButtonStyle.bordered,
+                        color: AppColors.red,
+                        textColor: AppColors.red,
+                        borderRadius: BorderRadius.circular(8),
+                        onPressed: _logout,
+                      ),
+                    ),
                   ),
                 ),
-                AdaptiveListTile(
-                  leading: const Icon(Icons.wifi),
-                  title: const Text('仅 Wi-Fi 下加载图片'),
-                  trailing: AdaptiveSwitch(
-                    value: _wifiOnly,
-                    activeColor: AppColors.primary,
-                    onChanged: (v) => setState(() => _wifiOnly = v),
-                  ),
-                ),
-                AdaptiveListTile(
-                  leading: const Icon(Icons.cleaning_services_outlined),
-                  title: const Text('清除缓存'),
-                  subtitle: Text(_cache),
-                  onTap: _clearCache,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            AdaptiveFormSection.insetGrouped(
-              header: const Text('关于'),
-              children: [
-                const AdaptiveListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text('版本'),
-                  trailing: Text('1.0.0', style: TextStyle(color: AppColors.textSecondary)),
-                ),
-                AdaptiveListTile(
-                  leading: const Icon(Icons.description_outlined),
-                  title: const Text('用户协议与隐私政策'),
-                  trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
-                  onTap: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              height: 48,
-              child: AdaptiveButton(
-                label: '退出登录',
-                style: AdaptiveButtonStyle.bordered,
-                color: AppColors.red,
-                textColor: AppColors.red,
-                borderRadius: BorderRadius.circular(24),
-                onPressed: _logout,
               ),
             ),
           ],

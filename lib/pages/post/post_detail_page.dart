@@ -71,8 +71,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
   void _onScroll() {
     final top = MediaQuery.paddingOf(context).top;
     final range = _expanded - kToolbarHeight - top;
-    // 最后 60px 才开始淡入作者栏，避免图还在就出现标题
-    final t = ((_scroll.offset - (range - 60)) / 60).clamp(0.0, 1.0);
+    // 头图完全收起来之后才开始淡入作者栏：图还露着的时候不出标题和「关注TA」
+    final t = ((_scroll.offset - range) / 28).clamp(0.0, 1.0);
     if (t != _collapse.value) _collapse.value = t;
   }
 
