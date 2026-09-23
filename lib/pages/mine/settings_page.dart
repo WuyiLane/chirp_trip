@@ -186,26 +186,33 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ],
             ),
-            // 退出登录固定在底部：和首页底栏一样的悬浮毛玻璃条，列表从它底下滚过去
+            // 退出登录：和首页底栏一样悬在底部——离边 12、毛玻璃、列表从它底下滚过去
             Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: ClipRect(
+              left: 12,
+              right: 12,
+              bottom: inset.bottom + 12,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                   child: Container(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    padding: EdgeInsets.fromLTRB(12, 10, 12, inset.bottom + 10),
-                    child: SizedBox(
-                      height: 48,
-                      child: AdaptiveButton(
-                        label: '退出登录',
-                        style: AdaptiveButtonStyle.bordered,
-                        color: AppColors.red,
-                        textColor: AppColors.red,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.72),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.red.withValues(alpha: 0.6)),
+                    ),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(8),
-                        onPressed: _logout,
+                        onTap: _logout,
+                        child: const Center(
+                          child: Text(
+                            '退出登录',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.red),
+                          ),
+                        ),
                       ),
                     ),
                   ),
