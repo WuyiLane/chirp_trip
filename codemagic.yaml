@@ -22,3 +22,20 @@ workflows:
           zip -qr chirp_trip.ipa Payload
     artifacts:
       - chirp_trip.ipa
+
+  android-apk:
+    name: Android APK
+    # 安卓不用 macOS，Linux 机器更快
+    instance_type: linux_x2
+    max_build_duration: 30
+    environment:
+      flutter: stable
+    scripts:
+      - name: 依赖
+        script: flutter pub get
+      # 这个项目的 release 沿用 debug 签名（android/app/build.gradle.kts 里写着），
+      # 所以不用配证书，出来的 apk 直接能装
+      - name: 编译 release apk
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
