@@ -163,7 +163,7 @@ class ChickTabBar extends StatelessWidget {
 /// 选中动画：线条像被一支笔从头画出来（draw 0 → 1，900ms），描到 [_litAt] 时颜色开始渗进来——
 /// t 用 easeOutBack 从 0 推到 1（会略微越过再回来），同时整体放大到 1.25 回弹。
 /// 两段重叠着走，笔还在收尾时黄色已经上来了，比描完再上色自然，整体也不会拖到一秒多。
-/// 取消选中时线保持画满，t 平滑退回 0。
+/// 取消选中时不播任何动画：线保持画满，颜色 / 表情 / 缩放直接落回线框态（和支付宝一样，切走的那个是静止的）。
 class _TabIcon extends StatefulWidget {
   const _TabIcon({required this.selected, required this.builder});
 
@@ -233,9 +233,11 @@ class _TabIconState extends State<_TabIcon> with TickerProviderStateMixin {
       _lit = false;
       _draw.forward(from: 0);
     } else {
+      // 切走的那个不播任何动画：线保持画满，颜色和表情直接落回线框态
       _lit = false;
       _draw.value = 1;
-      _expr.reverse();
+      _expr.value = 0;
+      _bounceCtrl.value = 0;
     }
   }
 
