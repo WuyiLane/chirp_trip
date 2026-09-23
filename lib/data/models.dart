@@ -149,3 +149,11 @@ class Spot {
   final double rating;
   final String desc;
 }
+
+/// 我自己发的评论：跨页面存一份，设置里能看到条数、也能一键清空
+class MyComment {
+  const MyComment({required this.postId, required this.comment});
+
+  final String postId;
+  final Comment comment;
+}

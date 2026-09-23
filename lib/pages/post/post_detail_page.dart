@@ -35,9 +35,13 @@ class _PostDetailPageState extends State<PostDetailPage> {
   bool _followed = false;
   int _imageIndex = 0;
 
-  /// 这条帖子的评论：先铺 mock 的，自己发的插在最前面
-  late final _comments = List<Comment>.of(Mock.comments);
-  late int _commentCount = widget.post.comments;
+  /// 我在这条帖子下发过的评论（存在 Mock.myComments 里，设置页能清空）
+  List<Comment> get _mine => [
+    for (final m in Mock.myComments)
+      if (m.postId == widget.post.id) m.comment,
+  ];
+
+  int get _commentCount => widget.post.comments + _mine.length;
 
   /// 面板开着的时候发评论，要让面板里的列表也刷新
   void Function(void Function())? _sheetSetState;
@@ -47,9 +51,22 @@ class _PostDetailPageState extends State<PostDetailPage> {
     final text = await showCommentInput(context);
     if (text == null || !mounted) return;
     setState(() {
-      _comments.insert(0, Comment(user: Mock.me, content: text, date: '刚刚', likes: 0));
-      _commentCount++;
+      Mock.myComments.insert(
+        0,
+        MyComment(
+          postId: widget.post.id,
+          comment: Comment(user: Mock.me, content: text, date: '刚刚', likes: 0),
+        ),
+      );
     });
+    _sheetSetState?.call(() {});
+  }
+
+  /// 删自己的评论：长按那条 → 确认 → 从 Mock.myComments 里移掉
+  Future<void> _deleteComment(Comment c) async {
+    final ok = await confirmDelete(context, '删除这条评论？');
+    if (ok != true || !mounted) return;
+    setState(() => Mock.myComments.removeWhere((m) => m.postId == widget.post.id && m.comment == c));
     _sheetSetState?.call(() {});
   }
 
@@ -57,10 +74,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
   ValueKey<String> _commentKey(Comment c) => ValueKey('${c.user.id}-${c.date}-${c.content}');
 
   /// 面板 / 正文里都显示这一份：自己发的在最前，后面用 mock 循环凑够条数，纯粹为了能滚起来
-  List<Comment> get _allComments => [
-    ..._comments,
-    for (var i = _comments.length; i < _commentCount; i++) Mock.comments[i % Mock.comments.length],
-  ];
+  List<Comment> get _allComments {
+    final mine = _mine;
+    return [...mine, for (var i = 0; i < widget.post.comments; i++) Mock.comments[i % Mock.comments.length]];
+  }
 
   @override
   void initState() {
@@ -189,7 +206,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  for (final c in _comments.take(3)) _CommentRow(c, key: _commentKey(c)),
+                  for (final c in _allComments.take(3))
+                    _CommentRow(
+                      c,
+                      key: _commentKey(c),
+                      onDelete: c.user.id == Mock.me.id ? () => _deleteComment(c) : null,
+                    ),
                   Center(
                     child: TextButton(
                       onPressed: _openComments,
@@ -239,7 +261,11 @@ class _PostDetailPageState extends State<PostDetailPage> {
             itemCount: all.length,
             separatorBuilder: (_, _) => const Divider(height: 1),
             // key 跟评论内容走：顶部插入新评论时，点赞数不会串到新的那条上
-            itemBuilder: (_, i) => _CommentRow(all[i], key: ValueKey('$i-${_commentKey(all[i]).value}')),
+            itemBuilder: (_, i) => _CommentRow(
+              all[i],
+              key: ValueKey('$i-${_commentKey(all[i]).value}'),
+              onDelete: all[i].user.id == Mock.me.id ? () => _deleteComment(all[i]) : null,
+            ),
           );
         },
       ),
@@ -403,33 +429,39 @@ class _AuthorRow extends StatelessWidget {
 }
 
 class _CommentRow extends StatelessWidget {
-  const _CommentRow(this.comment, {super.key});
+  const _CommentRow(this.comment, {super.key, this.onDelete});
 
   final Comment comment;
 
+  /// 自己发的评论才给：长按删除
+  final VoidCallback? onDelete;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Avatar(comment.user.avatar, size: 36),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(comment.user.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                Text(comment.date, style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
-                const SizedBox(height: 6),
-                Text(comment.content, style: const TextStyle(fontSize: 14, height: 1.5)),
-              ],
+    return GestureDetector(
+      onLongPress: onDelete,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Avatar(comment.user.avatar, size: 36),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(comment.user.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  Text(comment.date, style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                  const SizedBox(height: 6),
+                  Text(comment.content, style: const TextStyle(fontSize: 14, height: 1.5)),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          LikeButton(count: comment.likes, size: 16, fontSize: 12),
-        ],
+            const SizedBox(width: 8),
+            LikeButton(count: comment.likes, size: 16, fontSize: 12),
+          ],
+        ),
       ),
     );
   }

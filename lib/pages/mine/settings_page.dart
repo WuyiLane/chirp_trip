@@ -4,6 +4,7 @@ import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import '../../data/mock.dart';
 import '../../widgets/common.dart';
 import '../onboarding/onboarding_page.dart';
 
@@ -32,6 +33,36 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
     setState(() => _cache = '0 MB');
     AdaptiveSnackBar.show(context, message: '已清除 23.5 MB 缓存', type: AdaptiveSnackBarType.success);
+  }
+
+  /// 清空我发过的所有评论
+  Future<void> _clearMyComments() async {
+    if (Mock.myComments.isEmpty) {
+      AdaptiveSnackBar.show(context, message: '还没有发过评论', type: AdaptiveSnackBarType.info);
+      return;
+    }
+    final n = Mock.myComments.length;
+    final ok = await confirmDelete(context, '删除我发过的 $n 条评论？');
+    if (ok != true || !mounted) return;
+    setState(Mock.myComments.clear);
+    AdaptiveSnackBar.show(context, message: '已删除 $n 条评论', type: AdaptiveSnackBarType.success);
+  }
+
+  /// 关注 / 粉丝 / 获赞这三行：右边显示数字
+  Widget _count(IconData icon, String label, int value) {
+    return AdaptiveListTile(
+      leading: Icon(icon),
+      title: Text(label),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$value', style: const TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(width: 4),
+          const Icon(Icons.chevron_right, color: AppColors.textHint),
+        ],
+      ),
+      onTap: () {},
+    );
   }
 
   void _logout() {
@@ -72,7 +103,38 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: EdgeInsets.fromLTRB(12, inset.top + FrostedBar.barHeight + 12, 12, inset.bottom + 88),
               children: [
                 AdaptiveFormSection.insetGrouped(
-                  header: const Text('通用'),
+                  children: [
+                    AdaptiveListTile(
+                      leading: const Icon(Icons.person_outline),
+                      title: const Text('个人资料'),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+                      onTap: () {},
+                    ),
+                    AdaptiveListTile(
+                      leading: const Icon(Icons.lock_outline),
+                      title: const Text('账号与安全'),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+                      onTap: () {},
+                    ),
+                    AdaptiveListTile(
+                      leading: const Icon(Icons.shield_outlined),
+                      title: const Text('隐私设置'),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // 关注 / 粉丝 / 获赞：数字取的还是 Mock.me
+                AdaptiveFormSection.insetGrouped(
+                  children: [
+                    _count(Icons.person_add_alt_outlined, '关注', Mock.me.follows),
+                    _count(Icons.group_outlined, '粉丝', Mock.me.fans),
+                    _count(Icons.thumb_up_outlined, '获赞', Mock.me.likes),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                AdaptiveFormSection.insetGrouped(
                   children: [
                     AdaptiveListTile(
                       leading: const Icon(Icons.notifications_none),
@@ -98,11 +160,16 @@ class _SettingsPageState extends State<SettingsPage> {
                       subtitle: Text(_cache),
                       onTap: _clearCache,
                     ),
+                    AdaptiveListTile(
+                      leading: const Icon(Icons.delete_outline),
+                      title: const Text('删除我的评论'),
+                      subtitle: Text(Mock.myComments.isEmpty ? '还没有发过评论' : '共 ${Mock.myComments.length} 条'),
+                      onTap: _clearMyComments,
+                    ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 AdaptiveFormSection.insetGrouped(
-                  header: const Text('关于'),
                   children: [
                     const AdaptiveListTile(
                       leading: Icon(Icons.info_outline),

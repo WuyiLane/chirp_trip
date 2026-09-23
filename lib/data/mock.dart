@@ -342,5 +342,8 @@ abstract final class Mock {
     ('海滨栈道', 4.9, '沿海走一圈大概四十分钟，路很平，推婴儿车也没问题。\n\n中段有个小码头，拍照很出片。'),
   ];
 
+  /// 我发过的评论（发布即插到这里，设置页可以清空）
+  static final myComments = <MyComment>[];
+
   static List<Post> ofType(PostType type) => posts.where((p) => p.type == type).toList();
 }

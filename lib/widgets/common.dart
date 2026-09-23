@@ -335,3 +335,27 @@ class FrostedBar extends StatelessWidget {
     );
   }
 }
+
+/// 删除前的确认框：确定返回 true
+Future<bool?> confirmDelete(BuildContext context, String title, {String confirmText = '删除'}) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('取消', style: TextStyle(color: AppColors.textSecondary)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(
+            confirmText,
+            style: const TextStyle(color: AppColors.red, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
+}
