@@ -35,6 +35,33 @@ class _PostDetailPageState extends State<PostDetailPage> {
   bool _followed = false;
   int _imageIndex = 0;
 
+  /// 这条帖子的评论：先铺 mock 的，自己发的插在最前面
+  late final _comments = List<Comment>.of(Mock.comments);
+  late int _commentCount = widget.post.comments;
+
+  /// 面板开着的时候发评论，要让面板里的列表也刷新
+  void Function(void Function())? _sheetSetState;
+
+  /// 写评论：底部弹出输入框，发完插到列表最前面、计数 +1
+  Future<void> _writeComment() async {
+    final text = await showCommentInput(context);
+    if (text == null || !mounted) return;
+    setState(() {
+      _comments.insert(0, Comment(user: Mock.me, content: text, date: '刚刚', likes: 0));
+      _commentCount++;
+    });
+    _sheetSetState?.call(() {});
+  }
+
+  /// 一条评论的身份：mock 数据没有 id，用「作者 + 时间 + 内容」凑一个
+  ValueKey<String> _commentKey(Comment c) => ValueKey('${c.user.id}-${c.date}-${c.content}');
+
+  /// 面板 / 正文里都显示这一份：自己发的在最前，后面用 mock 循环凑够条数，纯粹为了能滚起来
+  List<Comment> get _allComments => [
+    ..._comments,
+    for (var i = _comments.length; i < _commentCount; i++) Mock.comments[i % Mock.comments.length],
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -158,16 +185,16 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     children: [
                       const Text('评论', style: AppText.sectionTitle),
                       const SizedBox(width: 6),
-                      Text('(${post.comments})', style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                      Text('($_commentCount)', style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  for (final c in Mock.comments) _CommentRow(c),
+                  for (final c in _comments.take(3)) _CommentRow(c, key: _commentKey(c)),
                   Center(
                     child: TextButton(
-                      onPressed: () => _openComments(post),
+                      onPressed: _openComments,
                       child: Text(
-                        '查看所有${post.comments}条评论  ›',
+                        '查看所有$_commentCount条评论  ›',
                         style: const TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -191,27 +218,34 @@ class _PostDetailPageState extends State<PostDetailPage> {
           ),
         ],
       ),
-      bottomNavigationBar: _BottomBar(post),
+      bottomNavigationBar: _BottomBar(post, onWrite: _writeComment),
     );
   }
 
   void _toggleFollow() => setState(() => _followed = !_followed);
 
-  /// 全部评论：微博那种浮动面板，往下拖能关、往上拖吸到全屏
-  void _openComments(Post post) {
-    // 评论数比 mock 多，循环凑够条数，纯粹为了让面板能滚起来
-    final all = [for (var i = 0; i < post.comments; i++) Mock.comments[i % Mock.comments.length]];
-    showDragSheet(
+  /// 全部评论：微博那种浮动面板，往下拖能关、往上拖吸到全屏；底部一条「写评论」
+  Future<void> _openComments() async {
+    await showDragSheet(
       context,
-      title: '${post.comments} 条评论',
-      builder: (_, controller) => ListView.separated(
-        controller: controller,
-        padding: EdgeInsets.fromLTRB(16, 4, 16, MediaQuery.paddingOf(context).bottom + 16),
-        itemCount: all.length,
-        separatorBuilder: (_, _) => const Divider(height: 1),
-        itemBuilder: (_, i) => _CommentRow(all[i]),
+      title: '$_commentCount 条评论',
+      builder: (_, controller) => StatefulBuilder(
+        builder: (_, setSheetState) {
+          _sheetSetState = setSheetState;
+          final all = _allComments;
+          return ListView.separated(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            itemCount: all.length,
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            // key 跟评论内容走：顶部插入新评论时，点赞数不会串到新的那条上
+            itemBuilder: (_, i) => _CommentRow(all[i], key: ValueKey('$i-${_commentKey(all[i]).value}')),
+          );
+        },
       ),
+      footer: _CommentBox(onTap: _writeComment),
     );
+    _sheetSetState = null;
   }
 
   /// 头图 Hero：飞行途中只画当前这一张图（不带轮播）。
@@ -369,7 +403,7 @@ class _AuthorRow extends StatelessWidget {
 }
 
 class _CommentRow extends StatelessWidget {
-  const _CommentRow(this.comment);
+  const _CommentRow(this.comment, {super.key});
 
   final Comment comment;
 
@@ -403,9 +437,10 @@ class _CommentRow extends StatelessWidget {
 
 /// 底部固定栏：评论输入 + 赞 / 收藏 / 分享
 class _BottomBar extends StatefulWidget {
-  const _BottomBar(this.post);
+  const _BottomBar(this.post, {required this.onWrite});
 
   final Post post;
+  final VoidCallback onWrite;
 
   @override
   State<_BottomBar> createState() => _BottomBarState();
@@ -426,12 +461,15 @@ class _BottomBarState extends State<_BottomBar> {
       child: Row(
         children: [
           Expanded(
-            child: Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(color: AppColors.inputBg, borderRadius: BorderRadius.circular(19)),
-              child: const Text('有想法就告诉TA哦', style: TextStyle(fontSize: 13, color: AppColors.textHint)),
+            child: GestureDetector(
+              onTap: widget.onWrite,
+              child: Container(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.centerLeft,
+                decoration: BoxDecoration(color: AppColors.inputBg, borderRadius: BorderRadius.circular(8)),
+                child: const Text('有想法就告诉TA哦', style: TextStyle(fontSize: 13, color: AppColors.textHint)),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -449,6 +487,31 @@ class _BottomBarState extends State<_BottomBar> {
           const SizedBox(width: 16),
           CountIcon(Icons.ios_share, widget.post.shares, size: 22),
         ],
+      ),
+    );
+  }
+}
+
+/// 「有想法就告诉TA哦」那条：点了弹出写评论的输入框
+class _CommentBox extends StatelessWidget {
+  const _CommentBox({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 10, 16, bottom + 10),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(color: AppColors.inputBg, borderRadius: BorderRadius.circular(8)),
+          child: const Text('有想法就告诉TA哦', style: TextStyle(fontSize: 13, color: AppColors.textHint)),
+        ),
       ),
     );
   }

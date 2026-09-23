@@ -16,7 +16,7 @@
 | 首页 | `pages/home/` | 问候、搜索、话题轮播、热门目的地、今日推荐 |
 | 发现 / 关注 | `pages/discover/` | 5 个分类入口 + 网友热推瀑布流；关注是时间线 |
 | 话题页 | `pages/topic/` | 封面 + 悬浮信息卡 + 主页/讨论 + 瀑布流 |
-| 随笔详情 | `pages/post/` | 图片轮播、折叠头、正文、评论、相关推荐 |
+| 随笔详情 | `pages/post/` | 图片轮播、折叠头、正文、评论（可发表）、相关推荐 |
 | 发布流程 | `pages/publish/` | 类型面板 → 相册多选（读手机相册，相机格子拍照）→ 编辑发布 |
 | 消息 | `pages/message/` | 通知 / 评论 / 私信 / 客服，私信左滑删除 |
 | 我的 / TA 的主页 | `pages/mine/` | 黄色头部 + 随笔/游记/收藏 |
@@ -38,6 +38,8 @@
 10. **我的 / TA 的主页**：黄色大头部随上滑半速上移并淡出，滚到位后换成「昵称 + 搜索我的内容 + 设置」的紧凑栏吸顶，胶囊 tab 行贴在它下面，随笔 / 游记 / 收藏 装在 PageView 里可左右滑、各自独立滚动（NestedScrollView，抖音「我」页式折叠头） —— `pages/mine/profile_page.dart`
 11. **首页**：状态栏留白，「今日推荐」吸顶（毛玻璃条，卡片从底下滚过），滚到底上拉加载下一页；底栏是 iOS 26 式悬浮毛玻璃胶囊，四个 tab 图标 + 文字常显，选中态不加背景：图标线条像笔一样从头描一遍（按路径长度取段，900ms），描到 80% 时黄色开始渗进来、弹表情，文字变黑加粗 —— `pages/home/home_page.dart` / `widgets/chick_tab_bar.dart`
 12. **发现 / 关注**：标题栏是毛玻璃，列表从底下滚过；两个 tab 装在 PageView 里，点标题或左右滑都能切 —— `pages/discover/discover_page.dart`
+
+13. **评论**：底部「有想法就告诉TA哦」或面板底部那条 → 弹出跟着键盘走的输入框，发出去插到列表最前面、计数 +1；「查看所有 N 条评论」是微博那种浮动面板（拖把手下滑关闭、上拖吸到全屏） —— `widgets/drag_sheet.dart` / `pages/post/post_detail_page.dart`
 
 公共件：`widgets/entrance.dart`（错落入场）、`widgets/pill_banner.dart`（黄色药丸提示）、`app/routes.dart`（子页 iOS 式右滑推入 + 边缘侧滑返回、发布相册底部滑入，配合 Hero）、`app/events.dart`（发布成功事件）。
 

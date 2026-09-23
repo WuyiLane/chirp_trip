@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
+import 'common.dart';
 
 /// 微博那种浮动面板：从底部升起，默认占屏幕六成多。
 /// - 拖把手往下 → 跟手下滑，松手时低于初始高度八成就关掉
@@ -12,6 +13,7 @@ Future<T?> showDragSheet<T>(
   required Widget Function(BuildContext context, ScrollController controller) builder,
   double initialSize = 0.62,
   bool expandable = true,
+  Widget? footer,
 }) {
   return showModalBottomSheet<T>(
     context: context,
@@ -25,6 +27,7 @@ Future<T?> showDragSheet<T>(
       initialSize: initialSize,
       expandable: expandable,
       builder: builder,
+      footer: footer,
       topInset: MediaQuery.paddingOf(context).top,
     ),
   );
@@ -36,6 +39,7 @@ class _DragSheet extends StatefulWidget {
     required this.initialSize,
     required this.expandable,
     required this.builder,
+    required this.footer,
     required this.topInset,
   });
 
@@ -43,6 +47,9 @@ class _DragSheet extends StatefulWidget {
   final double initialSize;
   final bool expandable;
   final Widget Function(BuildContext context, ScrollController controller) builder;
+
+  /// 钉在面板底部的一条（评论面板用它放「写评论」）
+  final Widget? footer;
   final double topInset;
 
   @override
@@ -138,6 +145,7 @@ class _DragSheetState extends State<_DragSheet> {
                   ),
                   const Divider(height: 1),
                   Expanded(child: widget.builder(context, controller)),
+                  if (widget.footer != null) widget.footer!,
                 ],
               ),
             );
@@ -186,6 +194,92 @@ class _DragHandle extends StatelessWidget {
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 写评论：从底部升起一个输入框，跟着键盘走；发出去就把文字返回给调用方，取消返回 null
+Future<String?> showCommentInput(BuildContext context, {String hint = '说点什么…'}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _CommentInput(hint: hint),
+  );
+}
+
+class _CommentInput extends StatefulWidget {
+  const _CommentInput({required this.hint});
+
+  final String hint;
+
+  @override
+  State<_CommentInput> createState() => _CommentInputState();
+}
+
+class _CommentInputState extends State<_CommentInput> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    Navigator.of(context).pop(text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inset = MediaQuery.viewInsetsOf(context).bottom;
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return Padding(
+      // 键盘弹起来时顶上去
+      padding: EdgeInsets.only(bottom: inset),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, (inset > 0 ? 12 : bottom + 12)),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 120),
+                child: TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  minLines: 1,
+                  maxLines: 4,
+                  maxLength: 200,
+                  textInputAction: TextInputAction.send,
+                  style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                  cursorColor: AppColors.textPrimary,
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: (_) => _send(),
+                  decoration: InputDecoration(
+                    hintText: widget.hint,
+                    hintStyle: const TextStyle(fontSize: 14, color: AppColors.textHint),
+                    filled: true,
+                    fillColor: AppColors.inputBg,
+                    isDense: true,
+                    counterText: '',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            PillButton(text: '发送', height: 36, enabled: _controller.text.trim().isNotEmpty, onTap: _send),
           ],
         ),
       ),
