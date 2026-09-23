@@ -1,4 +1,3 @@
-import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
@@ -45,32 +44,46 @@ class _SearchPageState extends State<SearchPage> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
+        leadingWidth: 44,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          padding: EdgeInsets.zero,
           onPressed: () => Navigator.pop(context),
         ),
-        title: AdaptiveTextField(
-          controller: _controller,
-          placeholder: '搜目的地、攻略、游记',
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          onChanged: (v) => setState(() => _query = v),
-          onSubmitted: _search,
-          decoration: InputDecoration(
-            hintText: '搜目的地、攻略、游记',
-            hintStyle: const TextStyle(fontSize: 14, color: AppColors.textHint),
-            filled: true,
-            fillColor: AppColors.inputBg,
-            isDense: true,
-            prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.textSecondary),
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+        // 用原生 TextField 而不是 AdaptiveTextField：后者在 iOS 上走 CupertinoTextField，
+        // 我们给的 decoration 不生效，框会明显变高、和返回键 / 取消对不齐
+        title: SizedBox(
+          height: 36,
+          child: TextField(
+            controller: _controller,
+            autofocus: true,
+            textInputAction: TextInputAction.search,
+            textAlignVertical: TextAlignVertical.center,
+            style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+            cursorColor: AppColors.textPrimary,
+            onChanged: (v) => setState(() => _query = v),
+            onSubmitted: _search,
+            decoration: InputDecoration(
+              hintText: '搜目的地、攻略、游记',
+              hintStyle: const TextStyle(fontSize: 14, color: AppColors.textHint),
+              filled: true,
+              fillColor: AppColors.inputBg,
+              isDense: true,
+              prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textSecondary),
+              prefixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 36),
+              contentPadding: const EdgeInsets.fromLTRB(0, 0, 12, 0),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消', style: TextStyle(color: AppColors.textPrimary)),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(56, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            child: const Text('取消', style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
           ),
         ],
       ),
@@ -88,8 +101,8 @@ class _SearchPageState extends State<SearchPage> {
                       GestureDetector(
                         onTap: () => _search(h),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(color: AppColors.inputBg, borderRadius: BorderRadius.circular(16)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(color: AppColors.inputBg, borderRadius: BorderRadius.circular(8)),
                           child: Text(h, style: const TextStyle(fontSize: 13)),
                         ),
                       ),
