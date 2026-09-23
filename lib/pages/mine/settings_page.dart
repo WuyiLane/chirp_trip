@@ -104,7 +104,12 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             ListView(
               // 底部留出悬浮的退出条
-              padding: EdgeInsets.fromLTRB(12, inset.top + FrostedBar.barHeight + 12, 12, inset.bottom + 88),
+              padding: EdgeInsets.fromLTRB(
+                12,
+                inset.top + FrostedBar.barHeight + 12,
+                12,
+                inset.bottom + _logoutHeight + 24,
+              ),
               children: [
                 AdaptiveFormSection.insetGrouped(
                   children: [
@@ -191,11 +196,11 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
             // 退出登录：整条悬在底部的毛玻璃胶囊，和首页底栏长一个样——
-            // 离边 16、全圆角、半透白 0.72 + 模糊 24 + 一圈白描边 + 只画在外面的阴影，列表从它底下滚过去
+            // 离边 12、全圆角、半透白 0.72 + 模糊 24 + 一圈白描边 + 只画在外面的阴影，列表从它底下滚过去
             Positioned(
-              left: 16,
-              right: 16,
-              bottom: inset.bottom + 16,
+              left: 12,
+              right: 12,
+              bottom: inset.bottom + 12,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(_logoutHeight / 2),
