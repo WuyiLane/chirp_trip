@@ -1,4 +1,5 @@
-import 'dart:ui' show ImageFilter;
+// adaptive_platform_ui 也导出了一个同名的 BlurStyle，这里加前缀区分
+import 'dart:ui' as ui;
 
 import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import 'package:flutter/material.dart';
@@ -186,31 +187,50 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ],
             ),
-            // 退出登录：和首页底栏一样悬在底部——离边 12、毛玻璃、列表从它底下滚过去
+            // 退出登录：一颗悬在底部正中的毛玻璃按钮，列表从它底下滚过去。
+            // 配方和首页底栏一样：半透白 0.72 + 模糊 24 + 一圈白描边 + 只画在外面的阴影
             Positioned(
-              left: 12,
-              right: 12,
-              bottom: inset.bottom + 12,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                  child: Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.72),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.red.withValues(alpha: 0.6)),
-                    ),
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(8),
-                        onTap: _logout,
-                        child: const Center(
-                          child: Text(
-                            '退出登录',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.red),
+              left: 0,
+              right: 0,
+              bottom: inset.bottom + 16,
+              child: Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1F000000),
+                        blurRadius: 20,
+                        offset: Offset(0, 6),
+                        blurStyle: ui.BlurStyle.outer,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: _logout,
+                          child: Container(
+                            height: 44,
+                            // 不写 alignment：写了 Container 会撑满整行，按钮就不是「一颗」了
+                            padding: const EdgeInsets.symmetric(horizontal: 40),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.72),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+                            ),
+                            child: const Center(
+                              widthFactor: 1,
+                              child: Text(
+                                '退出登录',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.red),
+                              ),
+                            ),
                           ),
                         ),
                       ),
