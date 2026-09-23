@@ -21,6 +21,9 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _push = true;
   bool _wifiOnly = false;
 
+  /// 底部那条退出胶囊的高度（和首页底栏一样是全圆角）
+  static const _logoutHeight = 52.0;
+
   /// 缓存大小（mock）：清完置 0
   String _cache = '23.5 MB';
 
@@ -187,50 +190,44 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ],
             ),
-            // 退出登录：一颗悬在底部正中的毛玻璃按钮，列表从它底下滚过去。
-            // 配方和首页底栏一样：半透白 0.72 + 模糊 24 + 一圈白描边 + 只画在外面的阴影
+            // 退出登录：整条悬在底部的毛玻璃胶囊，和首页底栏长一个样——
+            // 离边 16、全圆角、半透白 0.72 + 模糊 24 + 一圈白描边 + 只画在外面的阴影，列表从它底下滚过去
             Positioned(
-              left: 0,
-              right: 0,
+              left: 16,
+              right: 16,
               bottom: inset.bottom + 16,
-              child: Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1F000000),
-                        blurRadius: 20,
-                        offset: Offset(0, 6),
-                        blurStyle: ui.BlurStyle.outer,
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                      child: Material(
-                        type: MaterialType.transparency,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(8),
-                          onTap: _logout,
-                          child: Container(
-                            height: 44,
-                            // 不写 alignment：写了 Container 会撑满整行，按钮就不是「一颗」了
-                            padding: const EdgeInsets.symmetric(horizontal: 40),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.72),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-                            ),
-                            child: const Center(
-                              widthFactor: 1,
-                              child: Text(
-                                '退出登录',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.red),
-                              ),
-                            ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(_logoutHeight / 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1F000000),
+                      blurRadius: 20,
+                      offset: Offset(0, 6),
+                      blurStyle: ui.BlurStyle.outer,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(_logoutHeight / 2),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(_logoutHeight / 2),
+                        onTap: _logout,
+                        child: Container(
+                          height: _logoutHeight,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.72),
+                            borderRadius: BorderRadius.circular(_logoutHeight / 2),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+                          ),
+                          child: const Text(
+                            '退出登录',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.red),
                           ),
                         ),
                       ),
