@@ -1,6 +1,6 @@
-# Codemagic 配置：在云端 macOS 上编译「未签名」的 iOS 包（.ipa），
-# 下载后用 Sideloadly / 爱思助手 拿自己的 Apple ID 签名装到手机上试玩。
-# Codemagic 网页上选择这个仓库后会自动读到此文件，点 Start new build 选 ios-unsigned 即可。
+# Codemagic 配置：两个工作流——「iOS 未签名包」（macOS 机器）和「Android APK」（Linux 机器）。
+# iOS 产物是未签名的 .ipa，下载后用 Sideloadly / 爱思助手 拿自己的 Apple ID 签名再装；Android 的 apk 直接装。
+# Codemagic 网页上点 Start new build，在弹窗的 Workflow 下拉里选要跑哪个。
 workflows:
   ios-unsigned:
     name: iOS 未签名包
