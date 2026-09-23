@@ -105,10 +105,10 @@ class _SettingsPageState extends State<SettingsPage> {
             ListView(
               // 底部留出悬浮的退出条
               padding: EdgeInsets.fromLTRB(
-                12,
-                inset.top + FrostedBar.barHeight + 12,
-                12,
-                inset.bottom + _logoutHeight + 24,
+                8,
+                inset.top + FrostedBar.barHeight + 8,
+                8,
+                inset.bottom + _logoutHeight + 16,
               ),
               children: [
                 AdaptiveFormSection.insetGrouped(
@@ -133,7 +133,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 // 关注 / 粉丝 / 获赞：数字取的还是 Mock.me
                 AdaptiveFormSection.insetGrouped(
                   children: [
@@ -142,7 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     _count(Icons.thumb_up_outlined, '获赞', Mock.me.likes),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 AdaptiveFormSection.insetGrouped(
                   children: [
                     AdaptiveListTile(
@@ -177,7 +177,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 AdaptiveFormSection.insetGrouped(
                   children: [
                     const AdaptiveListTile(
@@ -196,11 +196,11 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
             // 退出登录：整条悬在底部的毛玻璃胶囊，和首页底栏长一个样——
-            // 离边 12、全圆角、半透白 0.72 + 模糊 24 + 一圈白描边 + 只画在外面的阴影，列表从它底下滚过去
+            // 离边 8、全圆角、半透白 0.72 + 模糊 24 + 一圈白描边 + 只画在外面的阴影，列表从它底下滚过去
             Positioned(
-              left: 12,
-              right: 12,
-              bottom: inset.bottom + 12,
+              left: 8,
+              right: 8,
+              bottom: inset.bottom + 8,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(_logoutHeight / 2),
