@@ -7,6 +7,7 @@ import '../../app/routes.dart';
 import '../../app/theme.dart';
 import '../../data/mock.dart';
 import '../../data/models.dart';
+import '../../utils/relative_time.dart';
 import '../../widgets/chick_tab_bar.dart';
 import '../../widgets/common.dart';
 import '../../widgets/like_button.dart';
@@ -133,7 +134,7 @@ class _FeedCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(post.author.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                      Text('${post.type.label} · ${post.date}', style: AppText.caption),
+                      Text('${post.type.label} · ${relativeTime(post.date)}', style: AppText.caption),
                     ],
                   ),
                 ),
@@ -169,7 +170,7 @@ class _FeedCard extends StatelessWidget {
                 const Icon(Icons.place, size: 14, color: AppColors.textSecondary),
                 const SizedBox(width: 2),
                 Expanded(child: Text(post.location, style: AppText.caption)),
-                LikeButton(count: post.likes),
+                LikeButton(count: post.likes, target: (type: 'post', id: post.id)),
                 const SizedBox(width: 18),
                 CountIcon(Icons.chat_bubble_outline, post.comments),
                 const SizedBox(width: 18),

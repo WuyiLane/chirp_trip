@@ -57,7 +57,12 @@ class PostCard extends StatelessWidget {
                           style: AppText.caption,
                         ),
                       ),
-                      LikeButton(count: post.likes, size: 16, fontSize: 12),
+                      LikeButton(
+                        count: post.likes,
+                        size: 16,
+                        fontSize: 12,
+                        target: (type: 'post', id: post.id),
+                      ),
                     ],
                   ),
                 ],

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app/theme.dart';
+import '../../data/session.dart';
 import '../../widgets/chick_face.dart';
 import '../../widgets/common.dart';
 import '../shell/main_shell.dart';
@@ -79,6 +80,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _loading = true);
     await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
+    Session.loggedIn = true;
     Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const MainShell()), (_) => false);
   }
 

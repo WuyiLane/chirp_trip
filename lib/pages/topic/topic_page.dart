@@ -1,8 +1,11 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
 import '../../data/mock.dart';
 import '../../data/models.dart';
+import '../../utils/relative_time.dart';
 import '../../widgets/common.dart';
 import '../../widgets/entrance.dart';
 import '../../widgets/like_button.dart';
@@ -11,8 +14,9 @@ import '../../widgets/post_card.dart';
 import '../publish/publish_sheet.dart';
 
 /// 话题页（设计稿动效 7）：封面 Hero 从列表 / 首页 banner 飞过来，
-/// 信息卡弹入、瀑布流卡片错落飞入；往上滚时封面淡出、信息卡吸顶，
-/// 「主页 / 讨论」tab 也吸顶，黄色下划线在两个 tab 之间滑动。
+/// 信息卡弹入、瀑布流卡片错落飞入；往上滚时封面淡出、信息卡跟着滑走藏到顶栏下面，
+/// 「主页 / 讨论」tab 吸在返回键下面（吸顶部分是毛玻璃，列表从底下滚过去），黄色下划线在两个 tab 之间滑动；
+/// 两个 tab 可以左右滑切换。
 class TopicPage extends StatefulWidget {
   const TopicPage(this.topic, {super.key, this.heroTag});
 
@@ -27,47 +31,64 @@ class _TopicPageState extends State<TopicPage> {
   int _tab = 0;
   bool _starred = false;
 
+  /// 两个 tab 装在 PageView 里：点标题或左右滑都能切，每个 tab 各自记自己的滚动位置
+  final _pager = PageController();
+
+  @override
+  void dispose() {
+    _pager.dispose();
+    super.dispose();
+  }
+
+  void _goTo(int i) {
+    _pager.animateToPage(i, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
+  }
+
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.paddingOf(context);
+    final header = _TopicHeader(
+      topic: widget.topic,
+      heroTag: widget.heroTag,
+      topPadding: padding.top,
+      starred: _starred,
+      onStar: () => setState(() => _starred = !_starred),
+      onBack: () => Navigator.pop(context),
+      tab: _tab,
+      onTab: _goTo,
+    );
+    // 和个人主页同一套：封面头部放外层，手指在哪个 tab 上滑都先把头部收起来再滚列表。
+    // SliverOverlapAbsorber 把吸顶那截（返回键行 + tab 行）扣掉，列表铺满、顶上留出同样高度：
+    // 吸顶后列表从毛玻璃头部底下滚过去
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _TopicHeader(
-                  topic: widget.topic,
-                  heroTag: widget.heroTag,
-                  topPadding: padding.top,
-                  starred: _starred,
-                  onStar: () => setState(() => _starred = !_starred),
-                  onBack: () => Navigator.pop(context),
-                ),
+          NestedScrollView(
+            headerSliverBuilder: (context, _) => [
+              SliverOverlapAbsorber(
+                handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+                sliver: SliverPersistentHeader(pinned: true, delegate: header),
               ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _TabsHeader(selected: _tab, onTap: (i) => setState(() => _tab = i)),
-              ),
-              SliverToBoxAdapter(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 260),
-                  switchInCurve: Curves.easeOutCubic,
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: SlideTransition(
-                      position: Tween(begin: const Offset(0, 0.04), end: Offset.zero).animate(anim),
-                      child: child,
-                    ),
-                  ),
-                  child: _tab == 0
-                      ? const Padding(key: ValueKey(0), padding: EdgeInsets.only(top: 6), child: _TopicWaterfall())
-                      : const _Discussion(key: ValueKey(1)),
-                ),
-              ),
-              SliverToBoxAdapter(child: SizedBox(height: padding.bottom + 100)),
             ],
+            body: PageView(
+              controller: _pager,
+              onPageChanged: (i) => setState(() => _tab = i),
+              // 到头了就别再拉出空白（iOS 默认是回弹的）
+              physics: const ClampingScrollPhysics(),
+              children: [
+                _TabPage(
+                  topPadding: header.minExtent + 6,
+                  bottomPadding: padding.bottom + 100,
+                  child: const _TopicWaterfall(),
+                ),
+                _TabPage(
+                  topPadding: header.minExtent,
+                  bottomPadding: padding.bottom + 100,
+                  child: _Discussion(topicId: widget.topic.id),
+                ),
+              ],
+            ),
           ),
           // 悬浮「+」
           Positioned(
@@ -97,6 +118,28 @@ class _TopicPageState extends State<TopicPage> {
   }
 }
 
+/// 一个 tab 的内容：用 primary 滚动控制器接进 NestedScrollView，往上滑先收起封面再滚自己
+class _TabPage extends StatelessWidget {
+  const _TabPage({required this.topPadding, required this.bottomPadding, required this.child});
+
+  /// 顶上让出吸顶头部的高度
+  final double topPadding;
+
+  /// 底部给悬浮「+」留的空
+  final double bottomPadding;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      primary: true,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(top: topPadding, bottom: bottomPadding),
+      children: [child],
+    );
+  }
+}
+
 class _TopicWaterfall extends StatelessWidget {
   const _TopicWaterfall();
 
@@ -104,7 +147,8 @@ class _TopicWaterfall extends StatelessWidget {
   Widget build(BuildContext context) => Waterfall(Mock.posts, heroScope: 'topic', animateIn: true);
 }
 
-/// 封面 + 信息卡：封面随滚动上移淡出，信息卡从压着封面下沿的位置一路滑到顶部吸住
+/// 封面 + 信息卡 + 「主页 / 讨论」：封面随滚动上移淡出，信息卡跟着滑走藏到返回键那一行下面，
+/// 吸顶后只剩「返回键行 + tab 行」，底色是毛玻璃，列表从底下滚过去时透出来
 class _TopicHeader extends SliverPersistentHeaderDelegate {
   const _TopicHeader({
     required this.topic,
@@ -113,6 +157,8 @@ class _TopicHeader extends SliverPersistentHeaderDelegate {
     required this.starred,
     required this.onStar,
     required this.onBack,
+    required this.tab,
+    required this.onTab,
   });
 
   final Topic topic;
@@ -121,70 +167,122 @@ class _TopicHeader extends SliverPersistentHeaderDelegate {
   final bool starred;
   final VoidCallback onStar;
   final VoidCallback onBack;
+  final int tab;
+  final ValueChanged<int> onTab;
 
   static const _cover = 240.0;
   static const _card = 128.0;
   static const _overlap = 56.0;
   static const _gap = 8.0;
+  static const _tabs = 44.0;
 
-  /// 吸顶后信息卡上面留一行给返回键
+  /// 返回键那一行的下沿：信息卡滑到这里就钻进去看不见了
   double get _pinnedTop => topPadding + 44;
 
   @override
-  double get maxExtent => _cover - _overlap + _card + _gap;
+  double get maxExtent => _cover - _overlap + _card + _gap + _tabs;
 
   @override
-  double get minExtent => _pinnedTop + _card + _gap;
+  double get minExtent => _pinnedTop + _tabs;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final range = maxExtent - minExtent;
     final t = (shrinkOffset / range).clamp(0.0, 1.0);
-    final cardTop = (_cover - _overlap - shrinkOffset).clamp(_pinnedTop, double.infinity);
+    // 快吸顶的最后一小段：白底退成毛玻璃，信息卡剩的那一小条（连同往下投的阴影）淡掉
+    final pinned = ((t - 0.9) / 0.1).clamp(0.0, 1.0);
+    final cardTop = _cover - _overlap - shrinkOffset;
     final cover = SizedBox(height: _cover, width: double.infinity, child: NetImage(topic.cover));
-    return Container(
-      color: Colors.white,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // 封面：半速上移 + 淡出，做出被信息卡「推走」的感觉
-          Positioned(
-            top: -shrinkOffset * 0.5,
-            left: 0,
-            right: 0,
-            child: Opacity(
-              opacity: 1 - t,
-              child: heroTag == null ? cover : Hero(transitionOnUserGestures: true, tag: heroTag!, child: cover),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // 毛玻璃底（和首页、发现页的吸顶栏同一套：模糊 24 + 白 78%），快吸顶时才加上：
+        // 没吸顶时有它会把紧贴在下面的图片颜色晕上来，头部底边落在半个像素上时还会漏出一条灰线
+        if (pinned > 0)
+          Positioned.fill(
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: ColoredBox(color: Colors.white.withValues(alpha: 0.78)),
+              ),
             ),
           ),
-          Positioned(
-            left: 16,
-            top: topPadding + 4,
-            child: RoundIconButton(
-              icon: Icons.arrow_back_ios_new,
-              onTap: onBack,
-              // 吸顶后封面没了，白圆底也跟着淡掉只剩箭头
-              background: Colors.white.withValues(alpha: 0.85 * (1 - t)),
+        Positioned.fill(child: ColoredBox(color: Colors.white.withValues(alpha: 1 - pinned))),
+        // 封面：半速上移 + 淡出，做出被信息卡「推走」的感觉
+        Positioned(
+          top: -shrinkOffset * 0.5,
+          left: 0,
+          right: 0,
+          child: Opacity(
+            opacity: 1 - t,
+            child: heroTag == null ? cover : Hero(transitionOnUserGestures: true, tag: heroTag!, child: cover),
+          ),
+        ),
+        // 信息卡跟着内容一起往上走，钻到返回键那一行下面就被裁掉
+        Positioned(
+          top: _pinnedTop,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: ClipRect(
+            clipper: const _ClipAbove(),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  top: cardTop - _pinnedTop,
+                  height: _card,
+                  child: Opacity(
+                    opacity: 1 - pinned,
+                    child: Entrance(
+                      offset: const Offset(0, 0.3),
+                      scaleFrom: 0.92,
+                      child: _InfoCard(topic: topic, starred: starred, onStar: onStar),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          Positioned(
-            left: 16,
-            right: 16,
-            top: cardTop,
-            height: _card,
-            child: Entrance(
-              offset: const Offset(0, 0.3),
-              scaleFrom: 0.92,
-              child: _InfoCard(topic: topic, starred: starred, onStar: onStar),
-            ),
+        ),
+        // 「主页 / 讨论」一直贴在头部最下面，吸顶后就在返回键下面
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: _tabs,
+          child: _Tabs(selected: tab, onTap: onTab),
+        ),
+        Positioned(
+          left: 16,
+          top: topPadding + 4,
+          child: RoundIconButton(
+            icon: Icons.arrow_back_ios_new,
+            onTap: onBack,
+            // 吸顶后封面没了，白圆底也跟着淡掉只剩箭头
+            background: Colors.white.withValues(alpha: 0.85 * (1 - t)),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   @override
-  bool shouldRebuild(_TopicHeader old) => old.starred != starred || old.topic != topic || old.topPadding != topPadding;
+  bool shouldRebuild(_TopicHeader old) =>
+      old.starred != starred || old.topic != topic || old.topPadding != topPadding || old.tab != tab;
+}
+
+/// 只裁掉上边：卡片的阴影往左右和下方溢出不受影响
+class _ClipAbove extends CustomClipper<Rect> {
+  const _ClipAbove();
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(-100, 0, size.width + 100, size.height + 100);
+
+  @override
+  bool shouldReclip(_ClipAbove oldClipper) => false;
 }
 
 class _InfoCard extends StatelessWidget {
@@ -275,8 +373,8 @@ class _InfoCard extends StatelessWidget {
 }
 
 /// 「主页 / 讨论」吸顶 tab：黄色下划线在两个 tab 之间滑动
-class _TabsHeader extends SliverPersistentHeaderDelegate {
-  const _TabsHeader({required this.selected, required this.onTap});
+class _Tabs extends StatelessWidget {
+  const _Tabs({required this.selected, required this.onTap});
 
   final int selected;
   final ValueChanged<int> onTap;
@@ -286,15 +384,8 @@ class _TabsHeader extends SliverPersistentHeaderDelegate {
   static const _underline = 18.0;
 
   @override
-  double get maxExtent => 44;
-
-  @override
-  double get minExtent => 44;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: Colors.white,
+  Widget build(BuildContext context) {
+    return Padding(
       padding: const EdgeInsets.only(left: 16),
       child: Stack(
         children: [
@@ -339,14 +430,14 @@ class _TabsHeader extends SliverPersistentHeaderDelegate {
       ),
     );
   }
-
-  @override
-  bool shouldRebuild(_TabsHeader old) => old.selected != selected;
 }
 
 /// 「讨论」tab：评论列表，每条错落飞入
 class _Discussion extends StatelessWidget {
-  const _Discussion({super.key});
+  const _Discussion({required this.topicId});
+
+  /// mock 评论没有自己的 id，点赞记到 likes 表时用「话题 id:作者 id」拼
+  final String topicId;
 
   @override
   Widget build(BuildContext context) {
@@ -370,17 +461,44 @@ class _Discussion extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(c.user.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                          Text(c.date, style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                          // 名字 …… 时间（最右）
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  c.user.name,
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              Text(
+                                relativeTime(c.date),
+                                style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 6),
-                          Text(c.content, style: const TextStyle(fontSize: 14, height: 1.5)),
+                          // 正文 …… 赞（在时间正下方，对齐正文第一行）
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: Text(c.content, style: const TextStyle(fontSize: 14, height: 1.5))),
+                              const SizedBox(width: 8),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: LikeButton(
+                                  count: c.likes * 5,
+                                  size: 16,
+                                  fontSize: 12,
+                                  target: (type: 'comment', id: '$topicId:${c.user.id}'),
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 6),
                           Text('查看${c.likes + 6}条回复 ›', style: const TextStyle(fontSize: 12, color: Color(0xFF3F7FD6))),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    LikeButton(count: c.likes * 5, size: 16, fontSize: 12),
                   ],
                 ),
               ),

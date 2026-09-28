@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 桌面图标前景：和 splash_chick.xml 同一只小啾（路径照抄），整组缩到 60dp 放在 108dp 画布正中
+     （落在自适应图标 66dp 的安全区里）。缩放：x' = x × 60/128 + (24 − 80 × 60/128) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.46875"
+        android:scaleY="0.46875"
+        android:translateX="-13.5"
+        android:translateY="-13.5">
+        <path
+            android:fillColor="#FFFAD524"
+            android:pathData="M92.8,151.68a51.2,51.2 0,1 0,102.4 0a51.2,51.2 0,1 0,-102.4 0Z" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FF1A1A1A"
+            android:strokeWidth="8.96"
+            android:pathData="M92.8,151.68a51.2,51.2 0,1 0,102.4 0a51.2,51.2 0,1 0,-102.4 0Z" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FF1A1A1A"
+            android:strokeWidth="8.96"
+            android:strokeLineCap="round"
+            android:pathData="M136.32,100.48Q123.52,80 141.44,82.56M149.12,100.48Q156.8,77.44 167.04,87.68" />
+        <path
+            android:fillColor="#FF1A1A1A"
+            android:pathData="M118.144,145.536a6.4,6.4 0,1 0,12.8 0a6.4,6.4 0,1 0,-12.8 0ZM157.056,145.536a6.4,6.4 0,1 0,12.8 0a6.4,6.4 0,1 0,-12.8 0Z" />
+        <path
+            android:fillColor="#FFFF8A3D"
+            android:strokeColor="#FF1A1A1A"
+            android:strokeWidth="6.4"
+            android:pathData="M144,154.24L155.264,166.016L144,177.28L132.736,166.016Z" />
+        <path
+            android:fillColor="#66FF7B7B"
+            android:pathData="M104.576,166.016a7.68,7.68 0,1 0,15.36 0a7.68,7.68 0,1 0,-15.36 0ZM168.064,166.016a7.68,7.68 0,1 0,15.36 0a7.68,7.68 0,1 0,-15.36 0Z" />
+    </group>
+</vector>

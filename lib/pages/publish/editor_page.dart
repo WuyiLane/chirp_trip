@@ -44,7 +44,7 @@ class _EditorPageState extends State<EditorPage> {
       likes: 0,
       comments: 0,
       shares: 0,
-      date: '刚刚',
+      date: DateTime.now(),
       coverRatio: 1,
     );
     Navigator.of(context).popUntil((r) => r.isFirst);

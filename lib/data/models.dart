@@ -57,7 +57,7 @@ class Post {
   final int likes;
   final int comments;
   final int shares;
-  final String date;
+  final DateTime date;
 
   /// 封面宽高比（宽 / 高），瀑布流靠它错开高度
   final double coverRatio;
@@ -76,12 +76,21 @@ class Topic {
 }
 
 class Comment {
-  const Comment({required this.user, required this.content, required this.date, required this.likes});
+  const Comment({
+    required this.user,
+    required this.content,
+    required this.date,
+    required this.likes,
+    this.remoteId,
+  });
 
   final User user;
   final String content;
-  final String date;
+  final DateTime date;
   final int likes;
+
+  /// 后端返回的主键；本地 mock 的评论没有，删除时靠它区分是不是要发请求
+  final int? remoteId;
 }
 
 /// 私信会话
@@ -90,7 +99,7 @@ class ChatThread {
 
   final User user;
   final String lastMessage;
-  final String time;
+  final DateTime time;
   final int unread;
 }
 
@@ -106,11 +115,11 @@ class CommentNotice {
   });
 
   final User user;
-  final String date;
+  final DateTime date;
   final String content;
   final String quotedText;
   final String quotedImage;
-  final String postDate;
+  final DateTime postDate;
 }
 
 /// 系统通知 / 客服消息
@@ -119,7 +128,7 @@ class Notice {
 
   final String title;
   final String desc;
-  final String time;
+  final DateTime time;
 }
 
 /// 目的地（首页「热门目的地」）→ 城市 → 景点，三层都是 mock

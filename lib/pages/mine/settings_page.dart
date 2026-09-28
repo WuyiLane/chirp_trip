@@ -6,8 +6,9 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
 import '../../data/mock.dart';
+import '../../data/session.dart';
 import '../../widgets/common.dart';
-import '../onboarding/onboarding_page.dart';
+import '../auth/login_page.dart';
 
 /// 设置页：分组白卡（自己画的行，中性细线图标 + 内缩分隔线）+ 底部悬浮的毛玻璃退出胶囊。
 class SettingsPage extends StatefulWidget {
@@ -120,9 +121,9 @@ class _SettingsPageState extends State<SettingsPage> {
           style: AlertActionStyle.destructive,
           onPressed: () {
             Navigator.pop(context);
-            Navigator.of(
-              context,
-            ).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const OnboardingPage()), (_) => false);
+            // 引导页只在第一次打开时看，退出登录直接回登录页
+            Session.loggedIn = false;
+            Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginPage()), (_) => false);
           },
         ),
       ],

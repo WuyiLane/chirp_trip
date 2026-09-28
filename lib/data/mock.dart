@@ -5,6 +5,10 @@ String pic(String seed, {int w = 600, int h = 800}) => 'https://picsum.photos/se
 
 String avatar(int n) => 'https://i.pravatar.cc/150?img=$n';
 
+/// 相对「打开 App 那一刻」往前推，演示时「刚刚 / x分钟前 / 昨天」才一直成立
+DateTime _ago({int days = 0, int hours = 0, int minutes = 0, int seconds = 0}) =>
+    DateTime.now().subtract(Duration(days: days, hours: hours, minutes: minutes, seconds: seconds));
+
 abstract final class Mock {
   static const me = User(
     id: 'me',
@@ -51,7 +55,7 @@ abstract final class Mock {
       likes: 237,
       comments: 25,
       shares: 45,
-      date: '06-01',
+      date: DateTime(2026, 6, 1),
       coverRatio: 0.72,
     ),
     Post(
@@ -66,7 +70,7 @@ abstract final class Mock {
       likes: 109,
       comments: 12,
       shares: 6,
-      date: '06-03',
+      date: DateTime(2026, 6, 3),
       coverRatio: 1.0,
     ),
     Post(
@@ -81,7 +85,7 @@ abstract final class Mock {
       likes: 137,
       comments: 105,
       shares: 45,
-      date: '5分钟前',
+      date: _ago(minutes: 5),
       coverRatio: 1.33,
     ),
     Post(
@@ -96,7 +100,7 @@ abstract final class Mock {
       likes: 137,
       comments: 8,
       shares: 3,
-      date: '06-05',
+      date: DateTime(2026, 6, 5),
       coverRatio: 0.66,
     ),
     Post(
@@ -111,7 +115,7 @@ abstract final class Mock {
       likes: 169,
       comments: 20,
       shares: 4,
-      date: '06-08',
+      date: DateTime(2026, 6, 8),
       coverRatio: 1.5,
     ),
     Post(
@@ -126,7 +130,7 @@ abstract final class Mock {
       likes: 107,
       comments: 31,
       shares: 52,
-      date: '05-28',
+      date: DateTime(2026, 5, 28),
       coverRatio: 0.77,
     ),
     Post(
@@ -141,7 +145,7 @@ abstract final class Mock {
       likes: 269,
       comments: 44,
       shares: 60,
-      date: '05-30',
+      date: DateTime(2026, 5, 30),
       coverRatio: 0.86,
     ),
     Post(
@@ -156,7 +160,7 @@ abstract final class Mock {
       likes: 321,
       comments: 56,
       shares: 78,
-      date: '05-22',
+      date: DateTime(2026, 5, 22),
       coverRatio: 0.75,
     ),
     Post(
@@ -171,7 +175,7 @@ abstract final class Mock {
       likes: 24,
       comments: 67,
       shares: 2,
-      date: '06-09',
+      date: DateTime(2026, 6, 9),
       coverRatio: 1.2,
     ),
     Post(
@@ -186,7 +190,7 @@ abstract final class Mock {
       likes: 88,
       comments: 9,
       shares: 5,
-      date: '05-19',
+      date: DateTime(2026, 5, 19),
       coverRatio: 0.94,
     ),
   ];
@@ -219,19 +223,19 @@ abstract final class Mock {
     Comment(
       user: User(id: 'c1', name: '爱玩球的小猫咪', avatar: avatar(30)),
       content: '我的名字好玩么，啊哈哈哈',
-      date: '昨天',
+      date: _ago(hours: 27),
       likes: 19,
     ),
     Comment(
       user: User(id: 'c2', name: '大猪头', avatar: avatar(52)),
       content: '我在这里皮一下，没人发现吧👀',
-      date: '06-18',
+      date: DateTime(2026, 6, 18),
       likes: 15,
     ),
     Comment(
       user: User(id: 'c3', name: '陆宇杰', avatar: avatar(60)),
       content: '我在找工作，联系方式在作品里😂',
-      date: '06-15',
+      date: DateTime(2026, 6, 15),
       likes: 12,
     ),
   ];
@@ -240,64 +244,64 @@ abstract final class Mock {
     ChatThread(
       user: User(id: 'm1', name: '大头', avatar: avatar(3)),
       lastMessage: '大头大头下雨不愁，你有雨伞，我有大头',
-      time: '刚刚',
+      time: _ago(seconds: 10),
     ),
     ChatThread(
       user: User(id: 'm2', name: '梭罗的北斗星', avatar: avatar(14)),
       lastMessage: '有好听的名字吗？在线等',
-      time: '刚刚',
+      time: _ago(seconds: 30),
       unread: 2,
     ),
     ChatThread(
       user: User(id: 'm3', name: '我就是拉丝', avatar: avatar(22)),
       lastMessage: '😂😂😂',
-      time: '5分钟前',
+      time: _ago(minutes: 5),
       unread: 3,
     ),
     ChatThread(
       user: User(id: 'm4', name: '直立行走的鸡蛋', avatar: avatar(38)),
       lastMessage: '楼上是本人',
-      time: '10分钟前',
+      time: _ago(minutes: 10),
       unread: 5,
     ),
     ChatThread(
       user: User(id: 'm5', name: '狮子再大也是猫', avatar: avatar(41)),
       lastMessage: '这个名字也太有意思了',
-      time: '1小时前',
+      time: _ago(hours: 1),
     ),
     ChatThread(
       user: User(id: 'm6', name: '小神经', avatar: avatar(8)),
       lastMessage: '😂😂',
-      time: '1天前',
+      time: _ago(hours: 26),
     ),
   ];
 
   static final commentNotices = <CommentNotice>[
     CommentNotice(
       user: User(id: 'n1', name: 'felcia', avatar: avatar(25)),
-      date: '06-12',
+      date: DateTime(2026, 6, 12),
       content: '真漂亮呀！有时间一定要去，哦嚯嚯！！！',
       quotedText: '古北水镇位于北京密云，曾经的长城抗日就是在这一带的...',
       quotedImage: pic('gubei', w: 300, h: 200),
-      postDate: '06-06',
+      postDate: DateTime(2026, 6, 6),
     ),
     CommentNotice(
       user: User(id: 'n2', name: '梦飞到远方', avatar: avatar(56)),
-      date: '06-06',
+      date: DateTime(2026, 6, 6),
       content: '拍的真不错，有种很复古的感觉，喜欢😌',
       quotedText: '魔都最in网红地标，上海百年历史的见证者—武康大楼又...',
       quotedImage: pic('wukang', w: 300, h: 200),
-      postDate: '05-20',
+      postDate: DateTime(2026, 5, 20),
     ),
   ];
 
-  static const notices = <Notice>[
-    Notice(title: '你的随笔上了「网友热推」', desc: '《济州岛的海水浴场居然那么漂亮》被推荐到发现页', time: '2小时前'),
-    Notice(title: 'Judy 关注了你', desc: '去看看 TA 的主页吧', time: '昨天'),
-    Notice(title: '话题活动上线', desc: '#自驾旅行 征集开始，参与赢周边', time: '06-10'),
+  static final notices = <Notice>[
+    Notice(title: '你的随笔上了「网友热推」', desc: '《济州岛的海水浴场居然那么漂亮》被推荐到发现页', time: _ago(hours: 2)),
+    Notice(title: 'Judy 关注了你', desc: '去看看 TA 的主页吧', time: _ago(hours: 30)),
+    Notice(title: '话题活动上线', desc: '#自驾旅行 征集开始，参与赢周边', time: DateTime(2026, 6, 10)),
   ];
 
-  static const serviceNotices = <Notice>[Notice(title: '啾旅小助手', desc: '你好呀，有什么可以帮你的？', time: '刚刚')];
+  static final serviceNotices = <Notice>[Notice(title: '啾旅小助手', desc: '你好呀，有什么可以帮你的？', time: _ago(seconds: 5))];
 
   /// 首页热门目的地：每个目的地几座城市，每座城市几个景点，
   /// 第一个景点的封面就是城市封面，方便 Hero 从城市卡片飞到景点卡片。

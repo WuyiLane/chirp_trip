@@ -4,6 +4,7 @@ import '../../app/routes.dart';
 import '../../app/theme.dart';
 import '../../data/mock.dart';
 import '../../data/models.dart';
+import '../../utils/relative_time.dart';
 import '../../widgets/chick_tab_bar.dart';
 import '../../widgets/common.dart';
 import '../../widgets/entrance.dart';
@@ -234,7 +235,7 @@ class _NoticeRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Text(notice.time, style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+            Text(relativeTime(notice.time), style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
           ],
         ),
       ),
@@ -264,7 +265,7 @@ class _CommentNoticeRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(n.user.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                    Text(n.date, style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                    Text(relativeTime(n.date), style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
                   ],
                 ),
               ),
@@ -300,7 +301,7 @@ class _CommentNoticeRow extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text('您于${n.postDate}发布的随笔', style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                child: Text('您于${relativeTime(n.postDate)}发布的随笔', style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
               ),
               const Icon(Icons.mode_comment_outlined, size: 14, color: AppColors.textSecondary),
               const SizedBox(width: 4),
@@ -350,7 +351,7 @@ class _ChatRow extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(chat.time, style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                  Text(relativeTime(chat.time), style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
                   const SizedBox(height: 6),
                   if (chat.unread > 0)
                     Container(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme.dart';
 import '../../data/mock.dart';
 import '../../data/models.dart';
+import '../../utils/relative_time.dart';
 import '../../widgets/common.dart';
 import '../../widgets/like_button.dart';
 import '../../widgets/net_image.dart';
@@ -116,15 +117,40 @@ class _SpotPageState extends State<SpotPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(c.user.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                                Text(c.date, style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                                // 名字 …… 时间（最右）
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        c.user.name,
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                    Text(relativeTime(c.date), style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                                  ],
+                                ),
                                 const SizedBox(height: 6),
-                                Text(c.content, style: const TextStyle(fontSize: 14, height: 1.5)),
+                                // 正文 …… 赞（在时间正下方，对齐正文第一行）
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: Text(c.content, style: const TextStyle(fontSize: 14, height: 1.5))),
+                                    const SizedBox(width: 8),
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      // 景点没有 id，用景点名（「城市 + 景点」，不会重名）拼
+                                      child: LikeButton(
+                                        count: c.likes * 200,
+                                        size: 16,
+                                        fontSize: 12,
+                                        target: (type: 'comment', id: '${spot.name}:${c.user.id}'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          LikeButton(count: c.likes * 200, size: 16, fontSize: 12),
                         ],
                       ),
                     ),

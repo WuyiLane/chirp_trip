@@ -10,6 +10,7 @@ import '../../data/mock.dart';
 import '../../data/models.dart';
 import '../../widgets/chick_tab_bar.dart';
 import '../../widgets/common.dart';
+import '../../widgets/like_button.dart';
 import '../../widgets/net_image.dart';
 import '../../widgets/pill_banner.dart';
 import '../destination/destination_page.dart';
@@ -625,7 +626,7 @@ class _RecommendRow extends StatelessWidget {
                         Expanded(
                           child: Text(post.author.name, style: AppText.caption, overflow: TextOverflow.ellipsis),
                         ),
-                        CountIcon(Icons.thumb_up_outlined, post.likes, size: 14),
+                        LikeButton(count: post.likes, size: 14, target: (type: 'post', id: post.id)),
                       ],
                     ),
                   ],

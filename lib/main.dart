@@ -4,12 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app/theme.dart';
-import 'pages/onboarding/onboarding_page.dart';
+import 'data/session.dart';
+import 'pages/splash/splash_page.dart';
 
 final _appTheme = buildAppTheme();
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Session.init();
   // 状态栏透明、深色图标：页面头部是白/黄，状态栏跟着页面走
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -30,7 +32,7 @@ class ChirpTripApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // AdaptiveApp：Android 走 MaterialApp，iOS 走 CupertinoApp，主题统一从这里给
     return AdaptiveApp(
-      title: '啾啾',
+      title: '啾旅',
       themeMode: ThemeMode.light,
       materialLightTheme: _appTheme,
       localizationsDelegates: const [
@@ -43,7 +45,7 @@ class ChirpTripApp extends StatelessWidget {
       // AdaptiveApp 在 iOS 走 CupertinoApp，materialLightTheme 不会被套上，Material 组件会退回
       // 从 Cupertino 推导出来的默认主题（奶油色底、AppBar 滚动变色、水波纹）。这里统一再包一层。
       builder: (_, child) => Theme(data: _appTheme, child: child!),
-      home: const OnboardingPage(),
+      home: const SplashPage(),
     );
   }
 }

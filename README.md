@@ -56,3 +56,24 @@ iOS 注意：`AdaptiveApp` 在 iOS 走 CupertinoApp，Material 主题靠 `main.d
 ```bash
 flutter run
 ```
+
+## 后端（可选）
+
+`server/` 是一个 NestJS + TypeORM + MySQL 的小后端，目前只接管**评论**和**点赞**，其余数据仍是 App 里的 mock。
+
+App 调接口失败会自动退回本地 mock，所以**不开后端也能正常演示**，只是评论不入库。
+
+```bash
+cd server
+cp .env.example .env   # 填上 MySQL 密码
+npm install
+npm run dev            # http://localhost:3000/api
+```
+
+真机要连电脑的局域网 IP：
+
+```bash
+flutter run --dart-define=API_BASE=http://192.168.1.129:3000/api
+```
+
+装 MySQL、建库、接口清单、排查办法都在 [server/README.md](server/README.md)。

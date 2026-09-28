@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
 import '../../app/theme.dart';
+import '../../data/api.dart';
 import '../../data/mock.dart';
 import '../../data/models.dart';
+import '../../utils/relative_time.dart';
 import '../../widgets/common.dart';
 import '../../widgets/drag_sheet.dart';
 import '../../widgets/like_button.dart';
@@ -35,43 +37,73 @@ class _PostDetailPageState extends State<PostDetailPage> {
   bool _followed = false;
   int _imageIndex = 0;
 
-  /// 我在这条帖子下发过的评论（存在 Mock.myComments 里，设置页能清空）
-  List<Comment> get _mine => [
-    for (final m in Mock.myComments)
-      if (m.postId == widget.post.id) m.comment,
-  ];
+  /// 我在这条帖子下发过的评论。后端在线时用后端返回的，否则退回本地的 Mock.myComments。
+  List<Comment> get _mine =>
+      _remote ??
+      [
+        for (final m in Mock.myComments)
+          if (m.postId == widget.post.id) m.comment,
+      ];
+
+  /// 后端拿到的评论；null = 还没拿到或者后端没开
+  List<Comment>? _remote;
 
   int get _commentCount => widget.post.comments + _mine.length;
 
   /// 面板开着的时候发评论，要让面板里的列表也刷新
   void Function(void Function())? _sheetSetState;
 
-  /// 写评论：底部弹出输入框，发完插到列表最前面、计数 +1
+  /// 拉一次后端的评论；拿不到就保持 null，继续用本地那份
+  Future<void> _loadComments() async {
+    final list = await Api.comments(widget.post.id);
+    if (list == null || !mounted) return;
+    setState(() => _remote = list);
+    _sheetSetState?.call(() {});
+  }
+
+  /// 写评论：底部弹出输入框，发完插到列表最前面、计数 +1。
+  /// 后端在线就写库，否则只存在本地（离线也能演示）
   Future<void> _writeComment() async {
     final text = await showCommentInput(context);
     if (text == null || !mounted) return;
+    final saved = await Api.addComment(widget.post.id, text, Mock.me);
+    if (!mounted) return;
     setState(() {
-      Mock.myComments.insert(
-        0,
-        MyComment(
-          postId: widget.post.id,
-          comment: Comment(user: Mock.me, content: text, date: '刚刚', likes: 0),
-        ),
-      );
+      if (saved != null) {
+        _remote = [saved, ...?_remote];
+      } else {
+        Mock.myComments.insert(
+          0,
+          MyComment(
+            postId: widget.post.id,
+            comment: Comment(user: Mock.me, content: text, date: DateTime.now(), likes: 0),
+          ),
+        );
+      }
     });
     _sheetSetState?.call(() {});
   }
 
-  /// 删自己的评论：长按那条 → 确认 → 从 Mock.myComments 里移掉
+  /// 删自己的评论：长按那条 → 确认 → 后端删库（本地那条就从 Mock.myComments 里移掉）
   Future<void> _deleteComment(Comment c) async {
     final ok = await confirmDelete(context, '删除这条评论？');
     if (ok != true || !mounted) return;
-    setState(() => Mock.myComments.removeWhere((m) => m.postId == widget.post.id && m.comment == c));
+    if (c.remoteId != null) await Api.deleteComment(c.remoteId!);
+    if (!mounted) return;
+    setState(() {
+      _remote?.remove(c);
+      Mock.myComments.removeWhere((m) => m.postId == widget.post.id && m.comment == c);
+    });
     _sheetSetState?.call(() {});
   }
 
-  /// 一条评论的身份：mock 数据没有 id，用「作者 + 时间 + 内容」凑一个
-  ValueKey<String> _commentKey(Comment c) => ValueKey('${c.user.id}-${c.date}-${c.content}');
+  /// 一条评论的身份：后端的用 id；mock 数据没有 id，用「作者 + 时间 + 内容」凑一个
+  ValueKey<String> _commentKey(Comment c) =>
+      ValueKey(c.remoteId != null ? 'r${c.remoteId}' : '${c.user.id}-${c.date}-${c.content}');
+
+  /// 评论点赞记到 likes 表时用的 id：后端的评论用它自己的 id；
+  /// mock 评论没有 id，用「帖子 id:作者 id」凑（同一条 mock 评论在别的帖子下是另一条赞）
+  String _likeId(Comment c) => c.remoteId != null ? '${c.remoteId}' : '${widget.post.id}:${c.user.id}';
 
   /// 面板 / 正文里都显示这一份：自己发的在最前，后面用 mock 循环凑够条数，纯粹为了能滚起来
   List<Comment> get _allComments {
@@ -83,13 +115,19 @@ class _PostDetailPageState extends State<PostDetailPage> {
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
+    _loadComments();
   }
 
+  /// 正文里那行作者栏：顶栏的作者栏要等它整行滑进顶栏底下才出来，不然两行叠在一起
+  final _authorKey = GlobalKey();
+
   void _onScroll() {
-    final top = MediaQuery.paddingOf(context).top;
-    final range = _expanded - kToolbarHeight - top;
-    // 头图完全收起来之后才开始淡入作者栏：图还露着的时候不出标题和「关注TA」
-    final t = ((_scroll.offset - range) / 28).clamp(0.0, 1.0);
+    // SliverAppBar 展开高度是「状态栏 + _expanded」，收起是「状态栏 + 顶栏」，状态栏两边抵掉：
+    // 正文作者栏（头图下面 4px）整行滑进顶栏底下时的滚动距离 = _expanded - 顶栏 + 4 + 行高。
+    // 过了这个点，顶栏的作者栏再用 20px 淡入
+    final rowHeight = _authorKey.currentContext?.size?.height ?? 44;
+    final hiddenAt = _expanded - kToolbarHeight + 4 + rowHeight;
+    final t = ((_scroll.offset - hiddenAt) / 20).clamp(0.0, 1.0);
     if (t != _collapse.value) _collapse.value = t;
   }
 
@@ -153,7 +191,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
               ),
               child: _AuthorRow(
                 user: post.author,
-                subtitle: '${post.type.label} · ${post.date}',
+                subtitle: '${post.type.label} · ${relativeTime(post.date)}',
                 followed: _followed,
                 compact: true,
                 onFollow: _toggleFollow,
@@ -177,11 +215,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _AuthorRow(
-                    user: post.author,
-                    subtitle: '${post.type.label} · ${post.date}',
-                    followed: _followed,
-                    onFollow: _toggleFollow,
+                  KeyedSubtree(
+                    key: _authorKey,
+                    child: _AuthorRow(
+                      user: post.author,
+                      subtitle: '${post.type.label} · ${relativeTime(post.date)}',
+                      followed: _followed,
+                      onFollow: _toggleFollow,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(post.content, style: AppText.body),
@@ -210,6 +251,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     _CommentRow(
                       c,
                       key: _commentKey(c),
+                      likeId: _likeId(c),
                       onDelete: c.user.id == Mock.me.id ? () => _deleteComment(c) : null,
                     ),
                   Center(
@@ -264,6 +306,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
             itemBuilder: (_, i) => _CommentRow(
               all[i],
               key: ValueKey('$i-${_commentKey(all[i]).value}'),
+              likeId: _likeId(all[i]),
               onDelete: all[i].user.id == Mock.me.id ? () => _deleteComment(all[i]) : null,
             ),
           );
@@ -429,9 +472,12 @@ class _AuthorRow extends StatelessWidget {
 }
 
 class _CommentRow extends StatelessWidget {
-  const _CommentRow(this.comment, {super.key, this.onDelete});
+  const _CommentRow(this.comment, {super.key, required this.likeId, this.onDelete});
 
   final Comment comment;
+
+  /// 这条评论在 likes 表里的 targetId
+  final String likeId;
 
   /// 自己发的评论才给：长按删除
   final VoidCallback? onDelete;
@@ -451,15 +497,36 @@ class _CommentRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(comment.user.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  Text(comment.date, style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                  // 名字 …… 时间（最右）
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(comment.user.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      ),
+                      Text(relativeTime(comment.date), style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                    ],
+                  ),
                   const SizedBox(height: 6),
-                  Text(comment.content, style: const TextStyle(fontSize: 14, height: 1.5)),
+                  // 正文 …… 赞（在时间正下方，对齐正文第一行）
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: Text(comment.content, style: const TextStyle(fontSize: 14, height: 1.5))),
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: LikeButton(
+                          count: comment.likes,
+                          size: 16,
+                          fontSize: 12,
+                          target: (type: 'comment', id: likeId),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            LikeButton(count: comment.likes, size: 16, fontSize: 12),
           ],
         ),
       ),
@@ -505,7 +572,7 @@ class _BottomBarState extends State<_BottomBar> {
             ),
           ),
           const SizedBox(width: 16),
-          LikeButton(count: widget.post.likes, size: 22),
+          LikeButton(count: widget.post.likes, size: 22, target: (type: 'post', id: widget.post.id)),
           const SizedBox(width: 16),
           GestureDetector(
             onTap: () => setState(() => _starred = !_starred),
