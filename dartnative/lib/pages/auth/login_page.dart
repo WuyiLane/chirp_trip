@@ -1,0 +1,422 @@
+import 'dart:async';
+
+import 'package:dartnative/dartnative.dart';
+
+import '../../app/app_root.dart';
+import '../../app/theme.dart';
+import '../../data/session.dart';
+import '../../widgets/chick_face.dart';
+import '../shell/native_main_shell.dart';
+
+/// 登录页（设计稿动效 3）：两步走——
+/// 1. 输手机号，满 11 位「获取验证码」从浅黄变成实心黄；
+/// 2. 切到 6 格验证码，每填一格弹一下，填满自动进主壳。
+/// 演示项目：任意 11 位手机号 + 任意 6 位验证码。
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _phone = TextEditingController();
+  final _code = TextEditingController();
+  final _codeFocus = FocusNode();
+  bool _agreed = true;
+
+  /// 0 = 输手机号，1 = 输验证码
+  int _step = 0;
+  int _countdown = 0;
+  Timer? _timer;
+
+  /// 验证码填满后转圈校验，转完再进主壳
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _phone.dispose();
+    _code.dispose();
+    _codeFocus.dispose();
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  bool get _phoneOk => _phone.text.length == 11 && _agreed;
+
+  void _sendCode() {
+    if (!_phoneOk) return;
+    setState(() {
+      _step = 1;
+      _code.clear();
+      _countdown = 60;
+    });
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_countdown <= 1) t.cancel();
+      if (mounted) setState(() => _countdown--);
+    });
+    // 等切换动画走完再弹键盘
+    Future.delayed(const Duration(milliseconds: 360), () {
+      if (mounted) _codeFocus.requestFocus();
+    });
+  }
+
+  void _onCode(String v) {
+    setState(() {});
+    if (v.length == 6) {
+      _codeFocus.unfocus();
+      // 最后一格弹完再开始登录，让人看到填满的状态
+      Future.delayed(const Duration(milliseconds: 450), () {
+        if (mounted) _login();
+      });
+    }
+  }
+
+  Future<void> _login() async {
+    // 屏幕正中转个小圈，装作在校验验证码
+    setState(() => _loading = true);
+    await Future.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+    Session.loggedIn = true;
+    AppRoot.replace(const MainShell());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      // DartNative 的 Stack 不会像 Flutter 那样把非定位子组件约束成整屏宽，表单会塌成 0 宽，要 expand
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          _form(),
+          // 校验中：屏幕正中一只小黄圈，不压遮罩、不写字，只是把点击拦住
+          if (_loading)
+            const AbsorbPointer(
+              child: Center(
+                child: SizedBox(
+                  width: 34,
+                  height: 34,
+                  child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _form() {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 40),
+            // 左上角小啾 + 大标题
+            Row(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                  alignment: Alignment.center,
+                  child: const ChickFace(size: 40),
+                ),
+                const SizedBox(width: 16),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('你好呀', style: AppText.pageTitle),
+                    Text('欢迎来到啾旅', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 40),
+            // 两步之间横向滑动切换。不用 AnimatedSwitcher：DartNative 的版本只在 key 变化时换子组件，
+            // 同 key 的后续重建会被丢掉（按钮不变色、倒计时不走、验证码格子不显示数字），
+            // 而且它把子组件绝对定位、只有内容宽度。这里只给新步骤做入场，旧步骤直接撤掉
+            _StepIn(step: _step, child: _step == 0 ? _phoneStep() : _codeStep()),
+            const SizedBox(height: 56),
+            const Row(
+              children: [
+                Expanded(child: Divider()),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('其他登录方式', style: AppText.caption),
+                ),
+                Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _thirdParty(CupertinoIcons.chat_bubble_fill, const Color(0xFF07C160)),
+                const SizedBox(width: 28),
+                _thirdParty(CupertinoIcons.at, const Color(0xFF12B7F5)),
+                const SizedBox(width: 28),
+                _thirdParty(CupertinoIcons.person_fill, AppColors.textPrimary),
+              ],
+            ),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _phoneStep() {
+    return Column(
+      key: const ValueKey(0),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _phone,
+          keyboardType: TextInputType.phone,
+          maxLength: 11,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onChanged: (_) => setState(() {}),
+          // DartNative 没有 Flutter 浅色主题的默认字色，不写的话输入的字是白的
+          style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: '请输入手机号',
+            hintStyle: const TextStyle(color: AppColors.textHint, fontSize: 15),
+            filled: true,
+            fillColor: AppColors.inputBg,
+            counterText: '',
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(4, 8, 0, 0),
+          child: Text('演示：任意 11 位手机号 + 任意 6 位验证码', style: TextStyle(fontSize: 12, color: AppColors.textHint)),
+        ),
+        const SizedBox(height: 24),
+        // 满 11 位才「亮」：浅黄 → 实心黄，文字灰 → 黑
+        GestureDetector(
+          onTap: _sendCode,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOut,
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _phoneOk ? AppColors.primary : AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: _phoneOk ? AppShadow.primary : const [],
+            ),
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 260),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _phoneOk ? AppColors.textPrimary : AppColors.textHint,
+              ),
+              child: const Text('获取验证码'),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Checkbox(
+              value: _agreed,
+              activeColor: AppColors.primary,
+              onChanged: (v) => setState(() => _agreed = v ?? false),
+            ),
+            Expanded(
+              child: RichText(
+                text: TextSpan(
+                  text: '我已阅读并同意',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  children: [
+                    TextSpan(
+                      text: '《用户协议》',
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                    ),
+                    TextSpan(text: '和'),
+                    TextSpan(
+                      text: '《隐私政策》',
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _codeStep() {
+    final phone = _phone.text;
+    final masked = '${phone.substring(0, 3)}****${phone.substring(7)}';
+    return Column(
+      key: const ValueKey(1),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _step = 0),
+              child: const Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: Icon(CupertinoIcons.chevron_left, size: 16, color: AppColors.textSecondary),
+              ),
+            ),
+            Text('已发送验证码至 $masked', style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+          ],
+        ),
+        const SizedBox(height: 20),
+        _CodeBoxes(code: _code.text, focus: _codeFocus, controller: _code, onChanged: _onCode),
+        const SizedBox(height: 16),
+        Text(
+          _countdown > 0 ? '重新发送（$_countdown秒）' : '重新发送',
+          style: TextStyle(fontSize: 12, color: _countdown > 0 ? AppColors.textHint : AppColors.textPrimary),
+        ),
+      ],
+    );
+  }
+
+  Widget _thirdParty(IconData icon, Color color) {
+    return GestureDetector(
+      onTap: _login,
+      child: Container(
+        width: 52,
+        height: 52,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(color: AppColors.inputBg, shape: BoxShape.circle),
+        child: Icon(icon, color: color, size: 26),
+      ),
+    );
+  }
+}
+
+/// 换步骤时新步骤入场：淡入 + 从右边 25% 处滑进来（340ms easeOutCubic，同原 Flutter 版）。
+/// 第一次显示不做动画，和 AnimatedSwitcher 的初始子组件一样。
+class _StepIn extends StatefulWidget {
+  const _StepIn({required this.step, required this.child});
+
+  final int step;
+  final Widget child;
+
+  @override
+  State<_StepIn> createState() => _StepInState();
+}
+
+class _StepInState extends State<_StepIn> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 340), value: 1);
+  late final _anim = CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+
+  @override
+  void didUpdateWidget(_StepIn old) {
+    super.didUpdateWidget(old);
+    if (old.step != widget.step) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _anim,
+      child: SlideTransition(
+        position: Tween(begin: const Offset(0.25, 0), end: Offset.zero).animate(_anim),
+        // Column(start) 里不撑满，输入框和按钮会只有内容宽度
+        child: SizedBox(width: double.infinity, child: widget.child),
+      ),
+    );
+  }
+}
+
+/// 6 个验证码格子：真正的输入框透明地垫在下面接键盘，格子只负责展示。
+/// 当前要填的格子描黄边，填进数字的格子数字弹出来。
+class _CodeBoxes extends StatelessWidget {
+  const _CodeBoxes({required this.code, required this.focus, required this.controller, required this.onChanged});
+
+  final String code;
+  final FocusNode focus;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: focus.requestFocus,
+      // DartNative 的 Stack 由第一个非定位子组件定尺寸、且不会撑满：先给整行宽高再 expand，
+      // 否则透明输入框和格子行都只有内容宽度，格子挤成一团
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Opacity(
+              opacity: 0,
+              child: TextField(
+                controller: controller,
+                focusNode: focus,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: onChanged,
+                decoration: const InputDecoration(hintText: ''),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (var i = 0; i < 6; i++) _CodeBox(digit: i < code.length ? code[i] : null, active: i == code.length),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CodeBox extends StatelessWidget {
+  const _CodeBox({required this.digit, required this.active});
+
+  final String? digit;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final filled = digit != null;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: 44,
+      height: 52,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: filled ? AppColors.primaryLight : AppColors.inputBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: active || filled ? AppColors.primary : Colors.transparent, width: 2),
+      ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 260),
+        switchInCurve: Curves.easeOutBack,
+        transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+        child: Text(
+          digit ?? '',
+          key: ValueKey(digit),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+        ),
+      ),
+    );
+  }
+}
+
