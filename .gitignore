@@ -46,3 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# DartNative 版已拆到独立仓库 WuyiLane/snail-native
+/dartnative/
